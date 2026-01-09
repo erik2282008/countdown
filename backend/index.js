@@ -1,30 +1,33 @@
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
-import "./bot.js";
-import "./watcher.js";
-import "./post_end_watcher.js";
+import { initDB } from './db.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Импорты бота и вотчеров
+import('./bot.js').catch(e => console.error('Bot load error:', e));
+import('./watcher.js').catch(e => console.error('Watcher load error:', e));
+import('./post_end_watcher.js').catch(e => console.error('Post end watcher error:', e));
+
 const app = express();
 app.use(express.json());
-
-// ---------- STATIC FRONTEND ----------
 app.use(express.static(path.join(__dirname, "../frontend")));
 
-// ---------- ROOT ----------
+// Главная страница
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "../frontend/index.html"));
 });
 
-// ---------- API: ACCEPT EULA + GENERATE DEATH DATE ----------
+// API: ACCEPT EULA + GENERATE DEATH DATE
 app.post("/accept", async (req, res) => {
   const { telegram_id, language } = req.body;
   
   if (!telegram_id || !language) return res.sendStatus(400);
 
+  const { pool } = await import('./db.js');
+  
   // Генерация случайной даты смерти (10 часов - 100 лет)
   const minHours = 10;
   const maxYears = 100;
@@ -35,7 +38,6 @@ app.post("/accept", async (req, res) => {
   const deathTimestamp = new Date(Date.now() + randomMs);
 
   try {
-    const { pool } = await import('./db.js');
     await pool.query(
       `INSERT INTO users (telegram_id, language, death_timestamp)
        VALUES ($1, $2, $3)
@@ -50,7 +52,7 @@ app.post("/accept", async (req, res) => {
   }
 });
 
-// ---------- API: GET DEATH TIME ----------
+// API: GET DEATH TIME
 app.get("/time/:id", async (req, res) => {
   const telegramId = req.params.id;
   
@@ -70,28 +72,9 @@ app.get("/time/:id", async (req, res) => {
   }
 });
 
-// ---------- API: YOOKASSA PAYMENT ----------
-app.post("/payment", async (req, res) => {
-  const { telegram_id, type } = req.body;
-  
-  // Здесь будет интеграция с ЮКассой
-  // Пока просто увеличиваем extensions
-  try {
-    const { pool } = await import('./db.js');
-    await pool.query(
-      'UPDATE users SET extensions = extensions + 1 WHERE telegram_id = $1',
-      [telegram_id]
-    );
-    res.json({ success: true, message: "Time extended" });
-  } catch (error) {
-    res.status(500).json({ success: false, error: "Payment failed" });
-  }
-});
-
-// ---------- START SERVER ----------
+// Запуск сервера
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, async () => {
-  const { initDB } = await import('./db.js');
   await initDB();
   console.log("🕳 COUNTDOWN SERVER RUNNING ON PORT", PORT);
 });
