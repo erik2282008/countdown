@@ -21,14 +21,9 @@ app.get("/", (req, res) => {
 app.post("/accept", async (req, res) => {
   const { telegram_id, language } = req.body;
   
-  if (!telegram_id || !language) {
-    return res.status(400).json({ error: "Missing parameters" });
-  }
-
   try {
     const { pool } = await import('./db.js');
     
-    // Проверяем, есть ли уже пользователь
     const existing = await pool.query(
       'SELECT death_timestamp FROM users WHERE telegram_id = $1',
       [telegram_id]
@@ -37,28 +32,15 @@ app.post("/accept", async (req, res) => {
     let deathTimestamp;
     
     if (existing.rows.length > 0) {
-      // Используем существующее время
       deathTimestamp = existing.rows[0].death_timestamp;
     } else {
-      // Генерируем новое время по весам
       const random = Math.random();
       let ms;
       
-      if (random < 0.6) { // 60% - 20-35 дней
-        const days = 20 + Math.floor(Math.random() * 15);
-        ms = days * 24 * 60 * 60 * 1000;
-      } 
-      else if (random < 0.7) { // 10% - до 10 дней
-        const days = 1 + Math.floor(Math.random() * 9);
-        ms = days * 24 * 60 * 60 * 1000;
-      }
-      else if (random < 0.9) { // 20% - 50-100 лет
-        const years = 50 + Math.floor(Math.random() * 50);
-        ms = years * 365 * 24 * 60 * 60 * 1000;
-      }
-      else { // 10% - 1 день
-        ms = 24 * 60 * 60 * 1000;
-      }
+      if (random < 0.6) ms = (20 + Math.floor(Math.random() * 15)) * 24 * 60 * 60 * 1000;
+      else if (random < 0.7) ms = (1 + Math.floor(Math.random() * 9)) * 24 * 60 * 60 * 1000;
+      else if (random < 0.9) ms = (50 + Math.floor(Math.random() * 50)) * 365 * 24 * 60 * 60 * 1000;
+      else ms = 24 * 60 * 60 * 1000;
       
       deathTimestamp = new Date(Date.now() + ms);
     }
@@ -73,7 +55,6 @@ app.post("/accept", async (req, res) => {
     
     res.json({ success: true, death: deathTimestamp });
   } catch (error) {
-    console.error('Accept error:', error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -88,13 +69,9 @@ app.get("/time/:id", async (req, res) => {
       [telegramId]
     );
 
-    if (!rows.length) {
-      return res.status(404).json({ error: "User not found" });
-    }
-    
+    if (!rows.length) return res.status(404).json({ error: "User not found" });
     res.json({ death: rows[0].death_timestamp });
   } catch (error) {
-    console.error('Time error:', error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -102,5 +79,5 @@ app.get("/time/:id", async (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, async () => {
   await initDB();
-  console.log("🕳 COUNTDOWN SERVER RUNNING ON PORT", PORT);
+  console.log("🕳 COUNTDOWN SERVER RUNNING");
 });
