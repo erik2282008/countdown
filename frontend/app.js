@@ -1,33 +1,22 @@
-// Ждем полной загрузки DOM
 document.addEventListener('DOMContentLoaded', function() {
-  // Инициализация Telegram WebApp
-  if (window.Telegram && window.Telegram.WebApp) {
-    const tg = window.Telegram.WebApp;
+  const tg = window.Telegram?.WebApp;
+  if (tg) {
     tg.expand();
     tg.enableClosingConfirmation();
-    
-    console.log('Telegram WebApp initialized');
-    startApp(tg);
-  } else {
-    console.log('Telegram WebApp not detected - running in debug mode');
-    startApp();
   }
+  
+  startApp(tg);
 });
 
 function startApp(tg = null) {
   const app = document.getElementById('app');
-  
-  // Очищаем loading сообщение
-  app.innerHTML = '';
-  
   let language = null;
   let deathDate = null;
-  let lastPhraseDay = null;
   let timerInterval = null;
+  let lastPhraseTime = 0;
 
-  // ===================== EULA TEXTS =====================
-  const EULA_EN = `
-END USER LICENSE AGREEMENT
+  // ===================== ПОЛНЫЕ EULA ТЕКСТЫ =====================
+  const EULA_EN = `END USER LICENSE AGREEMENT
 ABSOLUTE & IRREVOCABLE VERSION
 (NO EXCEPTIONS)
 
@@ -155,11 +144,9 @@ reality.
 
 This Agreement is governed by such authority as the Application recognizes, if any.
 
-BY CONTINUING, YOU ACKNOWLEDGE THAT THE COUNTDOWN DID NOT BEGIN - IT WAS MERELY REVEALED.
-`;
+BY CONTINUING, YOU ACKNOWLEDGE THAT THE COUNTDOWN DID NOT BEGIN - IT WAS MERELY REVEALED.`;
 
-  const EULA_RU = `
-ЛИЦЕНЗИОННОЕ СОГЛАШЕНИЕ
+  const EULA_RU = `ЛИЦЕНЗИОННОЕ СОГЛАШЕНИЕ
 АБСОЛЮТНАЯ И БЕЗОТЗЫВНАЯ ВЕРСИЯ
 
 НАСТОЯЩЕЕ СОГЛАШЕНИЕ ЯВЛЯЕТСЯ ОКОНЧАТЕЛЬНЫМ И НЕПРЕОДОЛИМЫМ.
@@ -236,227 +223,258 @@ BY CONTINUING, YOU ACKNOWLEDGE THAT THE COUNTDOWN DID NOT BEGIN - IT WAS MERELY 
 
 Соглашение подчиняется той системе, которую признаёт Приложение.
 
-ПРОДОЛЖАЯ ИСПОЛЬЗОВАНИЕ, ВЫ ПОДТВЕРЖДАЕТЕ: ОТСЧЁТ НЕ НАЧАЛСЯ - ВАМ ПРОСТО СКАЗАЛИ, СКОЛЬКО ОСТАЛОСЬ.
-`;
+ПРОДОЛЖАЯ ИСПОЛЬЗОВАНИЕ, ВЫ ПОДТВЕРЖДАЕТЕ: ОТСЧЁТ НЕ НАЧАЛСЯ - ВАМ ПРОСТО СКАЗАЛИ, СКОЛЬКО ОСТАЛОСЬ.`;
 
-  // ===================== UI FUNCTIONS =====================
+  // ===================== UI ФУНКЦИИ =====================
+  function showScreen(html) {
+    app.innerHTML = html;
+  }
+
   function languageScreen() {
-    app.innerHTML = `
+    showScreen(`
       <div class="center">
         <div class="choice" data-lang="EN">ENGLISH</div>
         <div class="choice" data-lang="RU">РУССКИЙ</div>
       </div>
-    `;
+    `);
     
-    // Добавляем обработчики событий
     document.querySelectorAll('.choice').forEach(choice => {
-      choice.addEventListener('click', function() {
-        setLang(this.getAttribute('data-lang'));
-      });
+      choice.addEventListener('click', () => setLang(choice.dataset.lang));
     });
   }
 
-  function setLang(l) {
-    language = l;
-    app.innerHTML = `
+  function setLang(lang) {
+    language = lang;
+    const eulaText = lang === 'EN' ? EULA_EN : EULA_RU;
+    
+    showScreen(`
       <div class="eula">
-        <pre>${l === 'EN' ? EULA_EN : EULA_RU}</pre>
+        <pre>${eulaText}</pre>
         <div class="accept">ACCEPT</div>
       </div>
-    `;
+    `);
     
-    document.querySelector('.accept').addEventListener('click', accept);
+    document.querySelector('.accept').addEventListener('click', acceptEula);
   }
 
-  async function accept() {
-    let telegramId = tg ? tg.initDataUnsafe?.user?.id : 'test_' + Date.now();
+  async function acceptEula() {
+    const telegramId = tg?.initDataUnsafe?.user?.id || 'demo_' + Date.now();
     
-    if (!telegramId) {
-      showError('NO USER ID');
-      return;
-    }
-
     try {
       const response = await fetch('/accept', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          telegram_id: telegramId,
-          language
-        })
+        body: JSON.stringify({ telegram_id: telegramId, language })
       });
 
-      if (!response.ok) throw new Error('Accept failed');
-
-      app.innerHTML = '';
-      
-      setTimeout(() => {
-        app.innerHTML = `
-          <div class="center">
-            CALCULATION COMPLETE<br>
-            YOUR TIME HAS BEEN REVEALED
-          </div>
-        `;
-        setTimeout(() => loadTimer(telegramId), 1500);
-      }, 1200);
+      if (response.ok) {
+        showTimerAnimation();
+        setTimeout(() => loadTimerData(telegramId), 2000);
+      } else {
+        throw new Error('Failed to accept');
+      }
     } catch (error) {
-      console.error('Accept error:', error);
-      showError('NETWORK ERROR - TRY AGAIN');
+      showScreen('<div class="center">ERROR - TRY AGAIN</div>');
+      setTimeout(languageScreen, 2000);
     }
   }
 
-  async function loadTimer(telegramId) {
+  function showTimerAnimation() {
+    showScreen(`
+      <div class="center">
+        <div style="font-size: 24px; margin-bottom: 20px;">CALCULATION COMPLETE</div>
+        <div style="font-size: 20px;">YOUR TIME HAS BEEN REVEALED</div>
+      </div>
+    `);
+  }
+
+  async function loadTimerData(telegramId) {
     try {
       const response = await fetch(`/time/${telegramId}`);
-      if (!response.ok) throw new Error('Timer fetch failed');
-      
-      const data = await response.json();
-      deathDate = new Date(data.death);
-      
-      updateTimer();
-      timerInterval = setInterval(updateTimer, 1000);
+      if (response.ok) {
+        const data = await response.json();
+        deathDate = new Date(data.death);
+      } else {
+        // Если нет в базе, создаем демо-таймер
+        deathDate = generateDemoTime();
+      }
     } catch (error) {
-      console.error('Timer load error:', error);
-      showError('TIMER LOAD ERROR');
+      deathDate = generateDemoTime();
     }
+    startTimer();
   }
 
-  function showError(message) {
-    app.innerHTML = `<div class="center">${message}</div>`;
-    setTimeout(() => languageScreen(), 2000);
+  function generateDemoTime() {
+    const random = Math.random();
+    let ms;
+    
+    if (random < 0.6) {
+      const days = 20 + Math.floor(Math.random() * 15);
+      ms = days * 24 * 60 * 60 * 1000;
+    } else if (random < 0.7) {
+      const days = 1 + Math.floor(Math.random() * 9);
+      ms = days * 24 * 60 * 60 * 1000;
+    } else if (random < 0.9) {
+      const years = 50 + Math.floor(Math.random() * 50);
+      ms = years * 365 * 24 * 60 * 60 * 1000;
+    } else {
+      ms = 24 * 60 * 60 * 1000;
+    }
+    
+    return new Date(Date.now() + ms);
   }
 
-  // ===================== TIMER LOGIC =====================
-  function updateTimer() {
+  // ===================== ТАЙМЕР =====================
+  function startTimer() {
+    updateTimerDisplay();
+    timerInterval = setInterval(updateTimerDisplay, 1000);
+  }
+
+  function updateTimerDisplay() {
     if (!deathDate) return;
 
     const now = new Date();
     let diff = deathDate - now;
 
     if (diff <= 0) {
-      endSequence();
+      showFinalScreen();
       return;
     }
 
-    const sec = Math.floor(diff / 1000) % 60;
-    const min = Math.floor(diff / 60000) % 60;
-    const hrs = Math.floor(diff / 3600000) % 24;
-    const day = Math.floor(diff / 86400000) % 365;
-    const yrs = Math.floor(diff / (365 * 86400000));
+    const years = Math.floor(diff / (365 * 86400000));
+    const days = Math.floor((diff % (365 * 86400000)) / 86400000);
+    const hours = Math.floor((diff % 86400000) / 3600000);
+    const minutes = Math.floor((diff % 3600000) / 60000);
+    const seconds = Math.floor((diff % 60000) / 1000);
 
-    const daysLeft = Math.floor(diff / 86400000);
+    // Логика красных цифр: каждая следующая становится красной когда предыдущая достигла 00
+    const yrsRed = years === 0;
+    const dayRed = yrsRed && days === 0;
+    const hrsRed = yrsRed && dayRed && hours === 0;
+    const minRed = yrsRed && dayRed && hrsRed && minutes === 0;
+    const secRed = yrsRed && dayRed && hrsRed && minRed && seconds === 0;
 
-    let cls = '';
-    if (daysLeft <= 7) cls = 'red glitch';
-    if (diff <= 86400000) cls = 'red glitch blink';
-
-    // Ложное завершение
-    if (Math.random() < 0.001 && diff > 300000) {
-      triggerFalseEnd();
-    }
-
-    // Сбой секунд в последние минуты
-    let displaySec = sec;
-    if (diff <= 300000 && Math.random() < 0.1) {
-      displaySec = Math.floor(Math.random() * 60);
-    }
-
-    maybePhrase(daysLeft);
-
-    app.innerHTML = `
-      <div id="timer" class="${cls}">
-        ${String(yrs).padStart(2,'0')} YRS<br>
-        ${String(day).padStart(2,'0')} DAY<br>
-        ${String(hrs).padStart(2,'0')} HRS<br>
-        ${String(min).padStart(2,'0')} MIN<br>
-        ${String(displaySec).padStart(2,'0')} SEC
+    const timerHtml = `
+      <div class="timer-container">
+        <div class="timer-unit ${yrsRed ? 'red' : ''}">${String(years).padStart(2, '0')}</div>
+        <div class="timer-label">YRS</div>
+        
+        <div class="timer-unit ${dayRed ? 'red' : ''}">${String(days).padStart(2, '0')}</div>
+        <div class="timer-label">DAY</div>
+        
+        <div class="timer-unit ${hrsRed ? 'red' : ''}">${String(hours).padStart(2, '0')}</div>
+        <div class="timer-label">HRS</div>
+        
+        <div class="timer-unit ${minRed ? 'red' : ''}">${String(minutes).padStart(2, '0')}</div>
+        <div class="timer-label">MIN</div>
+        
+        <div class="timer-unit ${secRed ? 'red' : ''}">${String(seconds).padStart(2, '0')}</div>
+        <div class="timer-label">SEC</div>
       </div>
     `;
 
-    // Звук + вибрация за 24 часа
-    if (diff <= 86400000) {
-      if (navigator.vibrate) navigator.vibrate([200,100,200]);
+    // Эффекты
+    const isRedZone = diff <= 7 * 86400000;
+    const isCritical = diff <= 86400000;
+    
+    let effects = '';
+    if (isRedZone) effects += 'glitch ';
+    if (isCritical) effects += 'blink ';
+    if (Math.random() < 0.05) effects += 'distort ';
+
+    showScreen(`<div class="${effects.trim()}">${timerHtml}</div>`);
+
+    // Случайные фразы (не чаще раза в 10 минут)
+    const nowTime = Date.now();
+    if (isRedZone && nowTime - lastPhraseTime > 600000 && Math.random() < 0.1) {
+      showRandomPhrase();
+      lastPhraseTime = nowTime;
     }
 
-    // Микросбои интерфейса
-    if (Math.random() < 0.005) {
-      document.body.style.transform = 'translate(1px,-1px)';
-      setTimeout(() => document.body.style.transform = 'translate(0,0)', 50);
+    // Вибрация в последние сутки
+    if (isCritical && navigator.vibrate && Math.random() < 0.1) {
+      navigator.vibrate([100, 50, 100]);
     }
-    if (Math.random() < 0.003) {
-      document.body.style.filter = 'invert(1)';
-      setTimeout(() => document.body.style.filter = 'invert(0)', 80);
+
+    // Ложное завершение
+    if (diff > 300000 && Math.random() < 0.001) {
+      triggerFalseEnd();
     }
   }
 
-  // ===================== PHRASES =====================
-  function maybePhrase(daysLeft) {
-    const today = new Date().toDateString();
-    if (daysLeft <= 7 && today !== lastPhraseDay && Math.random() < 0.1) {
-      lastPhraseDay = today;
-      const phrases = language === 'RU' 
-        ? ['ТЫ НЕ ОДИН', 'ВРЕМЯ ИДЁТ', 'ОН БЛИЗКО', 'ТЫ ЭТО ЧУВСТВУЕШЬ', 'НЕ СМОТРИ НАЗАД', 'ОНО ВИДИТ ТЕБЯ']
-        : ['YOU ARE NOT ALONE', 'TIME IS RUNNING', 'IT IS CLOSE', 'YOU CAN FEEL IT', 'DONT LOOK BACK', 'IT SEES YOU'];
-      
-      const el = document.createElement('div');
-      el.className = 'phrase';
-      el.innerText = phrases[Math.floor(Math.random() * phrases.length)];
-      document.body.appendChild(el);
-      setTimeout(() => el.remove(), 4000);
-    }
+  function showRandomPhrase() {
+    const phrases = language === 'RU' 
+      ? ['ОН БЛИЗКО', 'ТЫ ЭТО ЧУВСТВУЕШЬ', 'НЕ СМОТРИ НАЗАД', 'ОНО ВИДИТ ТЕБЯ', 'ВРЕМЯ ИДЁТ', 'ТЫ НЕ ОДИН']
+      : ['IT IS CLOSE', 'YOU CAN FEEL IT', 'DONT LOOK BACK', 'IT SEES YOU', 'TIME IS RUNNING', 'YOU ARE NOT ALONE'];
+    
+    const phrase = phrases[Math.floor(Math.random() * phrases.length)];
+    const phraseEl = document.createElement('div');
+    phraseEl.className = 'phrase';
+    phraseEl.textContent = phrase;
+    document.body.appendChild(phraseEl);
+    
+    setTimeout(() => {
+      if (phraseEl.parentNode) phraseEl.remove();
+    }, 4000);
   }
-
-  // ===================== FALSE END =====================
-  const FALSE_END_PHRASES = {
-    EN: ['TIME EXPIRED', 'YOU ARE TOO LATE', 'IT HAS FOUND YOU', 'NO MORE SECONDS', 'END OF LINE'],
-    RU: ['ВРЕМЯ ИСТЕКЛО', 'ТЫ ОПОЗДАЛ', 'ОНО НАШЛО ТЕБЯ', 'СЕКУНД БОЛЬШЕ НЕТ', 'КОНЕЦ ЛИНИИ']
-  };
 
   function triggerFalseEnd() {
+    const phrases = language === 'RU' 
+      ? ['ВРЕМЯ ИСТЕКЛО', 'КОНЕЦ', 'ОНО ПРИШЛО']
+      : ['TIME EXPIRED', 'THE END', 'IT IS HERE'];
+    
     const overlay = document.createElement('div');
     overlay.className = 'false-end';
-    const arr = FALSE_END_PHRASES[language] || FALSE_END_PHRASES.EN;
-    overlay.innerText = arr[Math.floor(Math.random() * arr.length)];
+    overlay.textContent = phrases[Math.floor(Math.random() * phrases.length)];
     document.body.appendChild(overlay);
 
-    if (navigator.vibrate) navigator.vibrate([300,100,300]);
+    if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
 
     setTimeout(() => {
-      if (overlay.parentNode) {
-        overlay.remove();
-      }
-    }, 1000 + Math.random() * 3000);
+      if (overlay.parentNode) overlay.remove();
+    }, 1000 + Math.random() * 2000);
   }
 
-  // ===================== REAL END =====================
-  function endSequence() {
+  function showFinalScreen() {
     if (timerInterval) clearInterval(timerInterval);
     
-    app.innerHTML = '';
-    document.body.style.background = 'black';
-
-    setTimeout(() => {
-      app.innerHTML = `
-        <div class="center red" style="font-size: 28px;">
-          ${language === 'RU' ? 'ОНО ИДЁТ ЗА ТОБОЙ' : 'IT IS COMING FOR YOU'}
-        </div>
-      `;
-
-      if (navigator.vibrate) {
-        navigator.vibrate([500,200,500,200,500]);
-      }
-    }, 1000);
+    showScreen(`
+      <div class="final-screen red">
+        ${language === 'RU' ? 'ОНО ИДЁТ ЗА ТОБОЙ' : 'IT IS COMING FOR YOU'}
+      </div>
+    `);
+    
+    if (navigator.vibrate) {
+      navigator.vibrate([500, 200, 500, 200, 500]);
+    }
   }
 
-  // ===================== BLOCKERS =====================
+  // ===================== ПРОВЕРКА СУЩЕСТВУЮЩЕГО ПОЛЬЗОВАТЕЛЯ =====================
+  async function checkExistingUser() {
+    const telegramId = tg?.initDataUnsafe?.user?.id;
+    if (!telegramId) {
+      languageScreen();
+      return;
+    }
+
+    try {
+      const response = await fetch(`/time/${telegramId}`);
+      if (response.ok) {
+        const data = await response.json();
+        deathDate = new Date(data.death);
+        startTimer();
+      } else {
+        languageScreen();
+      }
+    } catch (error) {
+      languageScreen();
+    }
+  }
+
+  // Блокировка правого клика и выделения
   document.addEventListener('contextmenu', e => e.preventDefault());
   document.addEventListener('selectstart', e => e.preventDefault());
-  document.addEventListener('dragstart', e => e.preventDefault());
 
-  window.onbeforeunload = () => {
-    return 'THE COUNTDOWN CONTINUES';
-  };
-
-  // ===================== START APP =====================
-  languageScreen();
+  // Запуск
+  checkExistingUser();
 }
