@@ -8,9 +8,6 @@ RUN npm install
 COPY backend ./backend
 COPY frontend ./frontend
 
-WORKDIR /app/backend
+EXPOSE 8000
 
-ENV PORT=3000
-EXPOSE 3000
-
-CMD ["node", "index.js"]
+CMD ["node", "backend/index.js"]
