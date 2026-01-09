@@ -5,11 +5,6 @@ document.addEventListener('DOMContentLoaded', function() {
     tg.enableClosingConfirmation();
   }
   
-  // Добавляем сканирующие линии
-  const scanLines = document.createElement('div');
-  scanLines.className = 'scan-lines';
-  document.body.appendChild(scanLines);
-  
   startApp(tg);
 });
 
@@ -19,82 +14,6 @@ function startApp(tg = null) {
   let deathDate = null;
   let timerInterval = null;
   let lastPhraseTime = 0;
-  let lastHorrorEffect = 0;
-
-  // ===================== ХОРРОР-ЭФФЕКТЫ =====================
-  function triggerHorrorEffect() {
-    const now = Date.now();
-    if (now - lastHorrorEffect < 30000) return; // Не чаще чем раз в 30 секунд
-    
-    lastHorrorEffect = now;
-    
-    // Случайный эффект
-    const effect = Math.random();
-    
-    if (effect < 0.3) {
-      // Временное покраснение цифр
-      document.querySelectorAll('.timer-unit').forEach(unit => {
-        unit.classList.add('temporary-red');
-        setTimeout(() => unit.classList.remove('temporary-red'), 2000);
-      });
-    } 
-    else if (effect < 0.5) {
-      // Шёпот
-      const whispers = language === 'RU' 
-        ? ['не смотри', 'оно близко', 'ты уже мёртв', 'беги', 'поздно']
-        : ['dont look', 'it is close', 'you are dead', 'run', 'too late'];
-      
-      const whisperEl = document.createElement('div');
-      whisperEl.className = 'whisper';
-      whisperEl.textContent = whispers[Math.floor(Math.random() * whispers.length)];
-      document.body.appendChild(whisperEl);
-      
-      setTimeout(() => {
-        if (whisperEl.parentNode) whisperEl.remove();
-      }, 6000);
-    }
-    else if (effect < 0.7) {
-      // Кровавые подтёки
-      for (let i = 0; i < 3; i++) {
-        setTimeout(() => {
-          const drip = document.createElement('div');
-          drip.className = 'blood-drip';
-          drip.style.left = Math.random() * 100 + 'vw';
-          document.body.appendChild(drip);
-          
-          setTimeout(() => {
-            if (drip.parentNode) drip.remove();
-          }, 3000);
-        }, i * 500);
-      }
-    }
-    
-    // Случайный звук (если есть)
-    if (Math.random() < 0.5) {
-      playHorrorSound();
-    }
-  }
-
-  function playHorrorSound() {
-    // Простой звуковой эффект через Web Audio API
-    try {
-      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-      
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      
-      oscillator.frequency.setValueAtTime(100 + Math.random() * 400, audioContext.currentTime);
-      gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 1);
-      
-      oscillator.start();
-      oscillator.stop(audioContext.currentTime + 1);
-    } catch (e) {
-      console.log('Audio not supported');
-    }
-  }
 
   // ===================== ПОЛНЫЕ EULA ТЕКСТЫ =====================
   const EULA_EN = `END USER LICENSE AGREEMENT
@@ -362,9 +281,9 @@ BY CONTINUING, YOU ACKNOWLEDGE THAT THE COUNTDOWN DID NOT BEGIN - IT WAS MERELY 
 
   function showTimerAnimation() {
     showScreen(`
-      <div class="calculation-screen">
-        <div class="calculation-title">CALCULATION COMPLETE</div>
-        <div class="calculation-subtitle">YOUR TIME HAS BEEN REVEALED</div>
+      <div class="center">
+        <div style="font-size: 24px; margin-bottom: 20px;">CALCULATION COMPLETE</div>
+        <div style="font-size: 20px;">YOUR TIME HAS BEEN REVEALED</div>
       </div>
     `);
   }
@@ -376,60 +295,39 @@ BY CONTINUING, YOU ACKNOWLEDGE THAT THE COUNTDOWN DID NOT BEGIN - IT WAS MERELY 
         const data = await response.json();
         deathDate = new Date(data.death);
       } else {
-        deathDate = generateWeightedTime();
+        // Если нет в базе, создаем демо-таймер
+        deathDate = generateDemoTime();
       }
     } catch (error) {
-      deathDate = generateWeightedTime();
+      deathDate = generateDemoTime();
     }
     startTimer();
   }
 
-  function generateWeightedTime() {
+  function generateDemoTime() {
     const random = Math.random();
     let ms;
     
-    if (random < 0.6) { // 60% - 20-35 дней
+    if (random < 0.6) {
       const days = 20 + Math.floor(Math.random() * 15);
       ms = days * 24 * 60 * 60 * 1000;
-    } 
-    else if (random < 0.7) { // 10% - 1-10 дней
+    } else if (random < 0.7) {
       const days = 1 + Math.floor(Math.random() * 9);
       ms = days * 24 * 60 * 60 * 1000;
-    }
-    else if (random < 0.9) { // 20% - 50-100 лет
+    } else if (random < 0.9) {
       const years = 50 + Math.floor(Math.random() * 50);
       ms = years * 365 * 24 * 60 * 60 * 1000;
-    }
-    else { // 10% - 1 день
+    } else {
       ms = 24 * 60 * 60 * 1000;
     }
     
     return new Date(Date.now() + ms);
   }
 
-  // ===================== АНИМАЦИЯ ТАЙМЕРА =====================
+  // ===================== ТАЙМЕР =====================
   function startTimer() {
-    // Анимация появления цифр
-    showGrowingNumbers();
-    setTimeout(() => {
-      updateTimerDisplay();
-      timerInterval = setInterval(updateTimerDisplay, 1000);
-    }, 800);
-  }
-
-  function showGrowingNumbers() {
-    const numbers = ['00', '00', '00', '00', '00'];
-    const labels = ['YEARS', 'DAYS', 'HOURS', 'MINUTES', 'SECONDS'];
-    
-    let html = '';
-    numbers.forEach((num, index) => {
-      html += `
-        <div class="timer-unit number-animation" style="animation-delay: ${index * 0.1}s">${num}</div>
-        <div class="timer-label">${labels[index]}</div>
-      `;
-    });
-    
-    showScreen(`<div class="timer-container">${html}</div>`);
+    updateTimerDisplay();
+    timerInterval = setInterval(updateTimerDisplay, 1000);
   }
 
   function updateTimerDisplay() {
@@ -449,7 +347,7 @@ BY CONTINUING, YOU ACKNOWLEDGE THAT THE COUNTDOWN DID NOT BEGIN - IT WAS MERELY 
     const minutes = Math.floor((diff % 3600000) / 60000);
     const seconds = Math.floor((diff % 60000) / 1000);
 
-    // Логика красных цифр (последовательно)
+    // Логика красных цифр: каждая следующая становится красной когда предыдущая достигла 00
     const yrsRed = years === 0;
     const dayRed = yrsRed && days === 0;
     const hrsRed = yrsRed && dayRed && hours === 0;
@@ -459,19 +357,19 @@ BY CONTINUING, YOU ACKNOWLEDGE THAT THE COUNTDOWN DID NOT BEGIN - IT WAS MERELY 
     const timerHtml = `
       <div class="timer-container">
         <div class="timer-unit ${yrsRed ? 'red' : ''}">${String(years).padStart(2, '0')}</div>
-        <div class="timer-label">YEARS</div>
+        <div class="timer-label">YRS</div>
         
         <div class="timer-unit ${dayRed ? 'red' : ''}">${String(days).padStart(2, '0')}</div>
-        <div class="timer-label">DAYS</div>
+        <div class="timer-label">DAY</div>
         
         <div class="timer-unit ${hrsRed ? 'red' : ''}">${String(hours).padStart(2, '0')}</div>
-        <div class="timer-label">HOURS</div>
+        <div class="timer-label">HRS</div>
         
         <div class="timer-unit ${minRed ? 'red' : ''}">${String(minutes).padStart(2, '0')}</div>
-        <div class="timer-label">MINUTES</div>
+        <div class="timer-label">MIN</div>
         
         <div class="timer-unit ${secRed ? 'red' : ''}">${String(seconds).padStart(2, '0')}</div>
-        <div class="timer-label">SECONDS</div>
+        <div class="timer-label">SEC</div>
       </div>
     `;
 
@@ -482,26 +380,20 @@ BY CONTINUING, YOU ACKNOWLEDGE THAT THE COUNTDOWN DID NOT BEGIN - IT WAS MERELY 
     let effects = '';
     if (isRedZone) effects += 'glitch ';
     if (isCritical) effects += 'blink ';
-    if (Math.random() < 0.03) effects += 'distort ';
-    if (Math.random() < 0.02) effects += 'flicker ';
+    if (Math.random() < 0.05) effects += 'distort ';
 
     showScreen(`<div class="${effects.trim()}">${timerHtml}</div>`);
 
-    // Случайные хоррор-эффекты
-    if (Math.random() < 0.05) {
-      triggerHorrorEffect();
-    }
-
-    // Случайные фразы (редко)
+    // Случайные фразы (не чаще раза в 10 минут)
     const nowTime = Date.now();
-    if (nowTime - lastPhraseTime > 300000 && Math.random() < 0.1) { // Не чаще раз в 5 минут
+    if (isRedZone && nowTime - lastPhraseTime > 600000 && Math.random() < 0.1) {
       showRandomPhrase();
       lastPhraseTime = nowTime;
     }
 
     // Вибрация в последние сутки
     if (isCritical && navigator.vibrate && Math.random() < 0.1) {
-      navigator.vibrate([200, 100, 200]);
+      navigator.vibrate([100, 50, 100]);
     }
 
     // Ложное завершение
@@ -512,8 +404,8 @@ BY CONTINUING, YOU ACKNOWLEDGE THAT THE COUNTDOWN DID NOT BEGIN - IT WAS MERELY 
 
   function showRandomPhrase() {
     const phrases = language === 'RU' 
-      ? ['ОН БЛИЗКО', 'ТЫ ЭТО ЧУВСТВУЕШЬ', 'НЕ СМОТРИ НАЗАД', 'ОНО ВИДИТ ТЕБЯ', 'ВРЕМЯ ИДЁТ', 'ТЫ НЕ ОДИН', 'БЕГИ', 'ПОЗДНО']
-      : ['IT IS CLOSE', 'YOU CAN FEEL IT', 'DONT LOOK BACK', 'IT SEES YOU', 'TIME IS RUNNING', 'YOU ARE NOT ALONE', 'RUN', 'TOO LATE'];
+      ? ['ОН БЛИЗКО', 'ТЫ ЭТО ЧУВСТВУЕШЬ', 'НЕ СМОТРИ НАЗАД', 'ОНО ВИДИТ ТЕБЯ', 'ВРЕМЯ ИДЁТ', 'ТЫ НЕ ОДИН']
+      : ['IT IS CLOSE', 'YOU CAN FEEL IT', 'DONT LOOK BACK', 'IT SEES YOU', 'TIME IS RUNNING', 'YOU ARE NOT ALONE'];
     
     const phrase = phrases[Math.floor(Math.random() * phrases.length)];
     const phraseEl = document.createElement('div');
@@ -523,24 +415,24 @@ BY CONTINUING, YOU ACKNOWLEDGE THAT THE COUNTDOWN DID NOT BEGIN - IT WAS MERELY 
     
     setTimeout(() => {
       if (phraseEl.parentNode) phraseEl.remove();
-    }, 5000);
+    }, 4000);
   }
 
   function triggerFalseEnd() {
     const phrases = language === 'RU' 
-      ? ['ВРЕМЯ ИСТЕКЛО', 'КОНЕЦ', 'ОНО ПРИШЛО', 'ТЫ МЕРТВ']
-      : ['TIME EXPIRED', 'THE END', 'IT IS HERE', 'YOU ARE DEAD'];
+      ? ['ВРЕМЯ ИСТЕКЛО', 'КОНЕЦ', 'ОНО ПРИШЛО']
+      : ['TIME EXPIRED', 'THE END', 'IT IS HERE'];
     
     const overlay = document.createElement('div');
     overlay.className = 'false-end';
     overlay.textContent = phrases[Math.floor(Math.random() * phrases.length)];
     document.body.appendChild(overlay);
 
-    if (navigator.vibrate) navigator.vibrate([500, 200, 500]);
+    if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
 
     setTimeout(() => {
       if (overlay.parentNode) overlay.remove();
-    }, 1500 + Math.random() * 2000);
+    }, 1000 + Math.random() * 2000);
   }
 
   function showFinalScreen() {
@@ -553,11 +445,8 @@ BY CONTINUING, YOU ACKNOWLEDGE THAT THE COUNTDOWN DID NOT BEGIN - IT WAS MERELY 
     `);
     
     if (navigator.vibrate) {
-      navigator.vibrate([1000, 300, 1000, 300, 1000]);
+      navigator.vibrate([500, 200, 500, 200, 500]);
     }
-    
-    // Финальный хоррор-эффект
-    setTimeout(triggerHorrorEffect, 1000);
   }
 
   // ===================== ПРОВЕРКА СУЩЕСТВУЮЩЕГО ПОЛЬЗОВАТЕЛЯ =====================
@@ -582,10 +471,9 @@ BY CONTINUING, YOU ACKNOWLEDGE THAT THE COUNTDOWN DID NOT BEGIN - IT WAS MERELY 
     }
   }
 
-  // Блокировка
+  // Блокировка правого клика и выделения
   document.addEventListener('contextmenu', e => e.preventDefault());
   document.addEventListener('selectstart', e => e.preventDefault());
-  document.addEventListener('dragstart', e => e.preventDefault());
 
   // Запуск
   checkExistingUser();
