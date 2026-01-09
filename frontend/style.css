@@ -37,12 +37,13 @@ body {
 }
 
 .choice {
-  font-size: 28px;
-  margin: 25px 0;
+  font-size: 32px;
+  margin: 30px 0;
   cursor: pointer;
-  padding: 15px 30px;
-  border: 1px solid rgba(255,255,255,0.3);
+  padding: 20px 40px;
+  border: 2px solid rgba(255,255,255,0.4);
   transition: all 0.3s;
+  min-width: 250px;
 }
 
 .choice:hover {
@@ -62,49 +63,60 @@ body {
 
 .eula pre {
   white-space: pre-wrap;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.6;
   font-family: 'Courier New', monospace;
 }
 
 .accept {
-  margin: 30px auto;
-  font-size: 24px;
+  margin: 40px auto;
+  font-size: 28px;
   text-align: center;
   cursor: pointer;
-  padding: 15px 40px;
-  border: 1px solid rgba(255,255,255,0.5);
+  padding: 20px 50px;
+  border: 2px solid rgba(255,255,255,0.6);
   transition: all 0.3s;
+  min-width: 200px;
 }
 
 .accept:hover {
   color: red;
   border-color: red;
+  transform: scale(1.05);
 }
 
-/* Timer Screen */
+/* Timer Screen - КРУПНЫЙ ТАЙМЕР */
 .timer-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100%;
-  width: 100%;
+  height: 100vh;
+  width: 100vw;
   text-align: center;
+  padding: 20px;
 }
 
 .timer-unit {
-  margin: 8px 0;
-  font-size: 32px;
-  letter-spacing: 3px;
+  margin: 15px 0;
+  font-size: 64px;
+  letter-spacing: 5px;
   font-weight: bold;
+  line-height: 1;
+  min-height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
 }
 
 .timer-label {
-  font-size: 14px;
-  letter-spacing: 2px;
-  margin-top: 2px;
+  font-size: 18px;
+  letter-spacing: 3px;
+  margin-top: 5px;
   opacity: 0.8;
+  text-transform: uppercase;
+  min-height: 25px;
 }
 
 .red {
@@ -118,9 +130,9 @@ body {
 
 @keyframes glitch {
   0% { transform: translate(0); }
-  25% { transform: translate(-2px, 1px); }
-  50% { transform: translate(1px, -1px); }
-  75% { transform: translate(-1px, -2px); }
+  25% { transform: translate(-3px, 2px); }
+  50% { transform: translate(2px, -3px); }
+  75% { transform: translate(-2px, -3px); }
   100% { transform: translate(0); }
 }
 
@@ -140,27 +152,28 @@ body {
 
 @keyframes distort {
   0% { letter-spacing: normal; }
-  50% { letter-spacing: 4px; }
+  50% { letter-spacing: 6px; }
   100% { letter-spacing: normal; }
 }
 
 /* Phrases */
 .phrase {
   position: fixed;
-  bottom: 20%;
+  bottom: 25%;
   width: 100%;
   text-align: center;
   color: red;
-  font-size: 18px;
+  font-size: 22px;
   pointer-events: none;
   animation: fadeInOut 4s ease-in-out;
+  font-weight: bold;
 }
 
 @keyframes fadeInOut {
-  0% { opacity: 0; transform: translateY(20px); }
+  0% { opacity: 0; transform: translateY(30px); }
   20% { opacity: 1; transform: translateY(0); }
   80% { opacity: 1; transform: translateY(0); }
-  100% { opacity: 0; transform: translateY(-20px); }
+  100% { opacity: 0; transform: translateY(-30px); }
 }
 
 /* False End */
@@ -175,16 +188,17 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 32px;
+  font-size: 48px;
   z-index: 9999;
   animation: shake 0.2s infinite;
+  font-weight: bold;
 }
 
 @keyframes shake {
   0%, 100% { transform: translate(0); }
-  25% { transform: translate(-3px, 2px); }
-  50% { transform: translate(3px, -2px); }
-  75% { transform: translate(-2px, -3px); }
+  25% { transform: translate(-4px, 3px); }
+  50% { transform: translate(3px, -4px); }
+  75% { transform: translate(-3px, -4px); }
 }
 
 /* Final Screen */
@@ -192,14 +206,37 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 100%;
-  width: 100%;
-  font-size: 28px;
+  height: 100vh;
+  width: 100vw;
+  font-size: 42px;
   text-align: center;
   animation: pulse 2s infinite;
+  font-weight: bold;
 }
 
 @keyframes pulse {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+  50% { opacity: 0.6; }
+}
+
+/* Calculation Screen */
+.calculation-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  width: 100vw;
+  text-align: center;
+}
+
+.calculation-title {
+  font-size: 36px;
+  margin-bottom: 30px;
+  font-weight: bold;
+}
+
+.calculation-subtitle {
+  font-size: 28px;
+  opacity: 0.9;
 }
