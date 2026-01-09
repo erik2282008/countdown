@@ -1,6 +1,5 @@
 import TelegramBot from 'node-telegram-bot-api';
 import { pool } from './db.js';
-import { createPayment, createDelayPayment } from './payments.js';
 
 const BOT_TOKEN = '8447119124:AAHFwKTxugSjG7_3of3JW4PCjhexo19Quxc';
 
@@ -68,3 +67,4 @@ bot.on('message', async (msg) => {
     }, 3000);
   }
 });
+
