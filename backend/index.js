@@ -1,7 +1,7 @@
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
-import { initDB } from './db.js';
+import { initDB, pool } from './db.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -10,7 +10,15 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "../frontend")));
 
-// Импорты должны быть ДО запуска сервера
+// Включаем CORS для всех запросов
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  next();
+});
+
+// Импорты бота и вотчеров
 import('./bot.js').catch(e => console.error('Bot error:', e));
 import('./watcher.js').catch(e => console.error('Watcher error:', e));
 import('./post_end_watcher.js').catch(e => console.error('Post end watcher error:', e));
@@ -22,7 +30,7 @@ app.get("/", (req, res) => {
 
 // API: ACCEPT EULA + GENERATE DEATH DATE
 app.post("/accept", async (req, res) => {
-  console.log('📝 Accept endpoint called:', req.body);
+  console.log('📝 POST /accept called:', req.body);
   
   const { telegram_id, language } = req.body;
   
@@ -32,8 +40,6 @@ app.post("/accept", async (req, res) => {
   }
 
   try {
-    const { pool } = await import('./db.js');
-    
     // Проверяем существование пользователя
     const existing = await pool.query(
       'SELECT death_timestamp FROM users WHERE telegram_id = $1',
@@ -85,10 +91,9 @@ app.post("/accept", async (req, res) => {
 // API: GET DEATH TIME
 app.get("/time/:id", async (req, res) => {
   const telegramId = req.params.id;
-  console.log('⏰ Time endpoint called for ID:', telegramId);
+  console.log('⏰ GET /time called for ID:', telegramId);
   
   try {
-    const { pool } = await import('./db.js');
     const { rows } = await pool.query(
       'SELECT death_timestamp FROM users WHERE telegram_id = $1',
       [telegramId]
@@ -112,6 +117,17 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
+// Обработка OPTIONS запросов для CORS
+app.options("*", (req, res) => {
+  res.sendStatus(200);
+});
+
+// Обработка несуществующих маршрутов
+app.use((req, res) => {
+  console.log('❌ Route not found:', req.method, req.url);
+  res.status(404).json({ error: "Route not found" });
+});
+
 // Запуск сервера
 const PORT = process.env.PORT || 3000;
 
@@ -119,4 +135,6 @@ app.listen(PORT, async () => {
   await initDB();
   console.log("🕳 COUNTDOWN SERVER RUNNING ON PORT", PORT);
   console.log("🌐 Health check: http://localhost:" + PORT + "/health");
+  console.log("🌐 Accept endpoint: POST http://localhost:" + PORT + "/accept");
+  console.log("🌐 Time endpoint: GET http://localhost:" + PORT + "/time/:id");
 });
