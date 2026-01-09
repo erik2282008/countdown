@@ -3,7 +3,6 @@ import { pool } from './db.js';
 import './bot.js';
 import './watcher.js';
 import './post_end_watcher.js';
-import { handleSuccess, handleDelay } from './payments.js';
 
 const app = express();
 
@@ -73,30 +72,10 @@ app.get('/time/:telegram_id', async (req, res) => {
   res.json({ death });
 });
 
-// ---------- YOOKASSA WEBHOOK ----------
-app.post('/yookassa', async (req, res) => {
-  const event = req.body;
-
-  if (event?.event === 'payment.succeeded') {
-    const metadata = event.object.metadata || {};
-    const telegram_id = metadata.telegram_id;
-    const type = metadata.type;
-
-    if (telegram_id) {
-      if (type === 'delay') {
-        await handleDelay(telegram_id);
-      } else {
-        await handleSuccess(telegram_id);
-      }
-    }
-  }
-
-  res.sendStatus(200);
-});
-
 // ---------- START ----------
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
   console.log('COUNTDOWN SERVER RUNNING');
 });
+
