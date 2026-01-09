@@ -4,21 +4,41 @@
   <meta charset="UTF-8">
   <title>COUNTDOWN</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="/style.css">
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    body { 
+      background: black; 
+      color: white; 
+      margin: 0; 
+      padding: 0; 
+      font-family: monospace;
+    }
+    #app { 
+      width: 100vw; 
+      height: 100vh; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center;
+    }
+  </style>
 </head>
 <body>
-  <div id="app">
-    <div class="center" style="color: white; font-size: 18px;">
-      LOADING COUNTDOWN...
-    </div>
-  </div>
-  <script>
-    // Глобальная функция для перезагрузки
-    function reloadApp() {
-      location.reload();
-    }
-  </script>
+  <div id="app">LOADING COUNTDOWN...</div>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="/app.js"></script>
+  
+  <script>
+    // Фолбэк если основной скрипт не грузится
+    setTimeout(function() {
+      if (document.getElementById('app').innerHTML === 'LOADING COUNTDOWN...') {
+        document.getElementById('app').innerHTML = `
+          <div style="text-align: center;">
+            <div>SCRIPT LOAD ERROR</div>
+            <div style="margin-top: 20px; color: red;">Check browser console</div>
+            <div style="margin-top: 10px; cursor: pointer;" onclick="location.reload()">RELOAD</div>
+          </div>
+        `;
+      }
+    }, 3000);
+  </script>
 </body>
 </html>
