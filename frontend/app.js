@@ -1,38 +1,62 @@
 document.addEventListener('DOMContentLoaded', function() {
-  const tg = window.Telegram?.WebApp;
-  if (tg) {
-    tg.expand();
-    tg.enableClosingConfirmation();
-  }
+  console.log('🕳 COUNTDOWN APP INITIALIZING...');
   
-  // Предзагрузка медиа
-  preloadMedia();
-  
+  // Создаем сканирующие линии для эффекта
   const scanLines = document.createElement('div');
   scanLines.className = 'scan-lines';
   document.body.appendChild(scanLines);
   
-  startApp(tg);
+  // Предзагрузка медиафайлов
+  preloadMedia();
+  
+  // Запускаем приложение с небольшой задержкой для инициализации
+  setTimeout(() => {
+    startApp();
+  }, 100);
 });
 
 // Предзагрузка медиафайлов
 function preloadMedia() {
-  const sounds = ['/sounds/whisper.mp3', '/sounds/scratch.mp3', '/sounds/thump.mp3', '/sounds/static.mp3'];
-  const images = ['/images/face1.jpg', '/images/face2.jpg', '/images/symbol1.jpg', '/images/glitch.jpg'];
+  console.log('📦 Preloading media files...');
   
+  const sounds = [
+    '/sounds/whisper.mp3',
+    '/sounds/scratch.mp3', 
+    '/sounds/thump.mp3',
+    '/sounds/static.mp3'
+  ];
+  
+  const images = [
+    '/images/face1.jpg',
+    '/images/face2.jpg',
+    '/images/symbol1.jpg',
+    '/images/glitch.jpg'
+  ];
+  
+  // Предзагрузка звуков
   sounds.forEach(sound => {
-    const audio = new Audio();
-    audio.src = sound;
-    audio.load();
+    try {
+      const audio = new Audio();
+      audio.src = sound;
+      audio.preload = 'auto';
+      audio.load();
+    } catch (e) {
+      console.log('🔇 Sound preload failed:', sound);
+    }
   });
   
+  // Предзагрузка изображений
   images.forEach(image => {
-    const img = new Image();
-    img.src = image;
+    try {
+      const img = new Image();
+      img.src = image;
+    } catch (e) {
+      console.log('🖼️ Image preload failed:', image);
+    }
   });
 }
 
-function startApp(tg = null) {
+function startApp() {
   const app = document.getElementById('app');
   let language = null;
   let deathDate = null;
@@ -43,62 +67,126 @@ function startApp(tg = null) {
   let lastInteraction = Date.now();
   let shareAvailable = false;
 
-  // Обновляем время взаимодействия при любом действии
-  document.addEventListener('click', () => lastInteraction = Date.now());
-  document.addEventListener('touchstart', () => lastInteraction = Date.now());
-  document.addEventListener('mousemove', () => lastInteraction = Date.now());
+  // Получаем Telegram WebApp объект
+  let tg = null;
+  try {
+    tg = window.Telegram?.WebApp;
+    if (tg) {
+      tg.expand();
+      tg.enableClosingConfirmation();
+      console.log('✅ Telegram WebApp initialized');
+    } else {
+      console.log('ℹ️ Telegram WebApp not detected - running in standalone mode');
+    }
+  } catch (e) {
+    console.log('❌ Telegram WebApp initialization failed');
+  }
 
-  // ===================== НОВЫЕ ФУНКЦИИ =====================
+  // Отслеживаем взаимодействие пользователя
+  const updateInteraction = () => {
+    lastInteraction = Date.now();
+  };
+  
+  document.addEventListener('click', updateInteraction);
+  document.addEventListener('touchstart', updateInteraction);
+  document.addEventListener('mousemove', updateInteraction);
+  document.addEventListener('keydown', updateInteraction);
 
-  // ВИРАЛЬНАЯ МЕХАНИКА - ПОДЕЛИТЬСЯ РЕЗУЛЬТАТОМ
+  // ===================== ВИРАЛЬНАЯ МЕХАНИКА - ПОДЕЛИТЬСЯ РЕЗУЛЬТАТОМ =====================
   function initShareButton() {
     if (deathDate && !document.querySelector('.share-btn')) {
       const shareBtn = document.createElement('div');
       shareBtn.className = 'share-btn';
       shareBtn.innerHTML = '📱 SHARE RESULT';
-      shareBtn.addEventListener('click', shareResult);
+      
+      shareBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        shareResult();
+      });
+      
+      shareBtn.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        shareResult();
+      });
+      
       document.body.appendChild(shareBtn);
       
+      // Анимация появления
       setTimeout(() => {
         shareBtn.style.opacity = '1';
-        shareBtn.style.transform = 'translateY(0)';
+        shareBtn.style.transform = 'translateY(0) scale(1)';
       }, 100);
+      
+      console.log('📤 Share button initialized');
     }
   }
 
   function shareResult() {
-    if (!deathDate) return;
+    if (!deathDate) {
+      console.log('❌ No death date for sharing');
+      return;
+    }
     
-    const timeLeft = Math.floor((deathDate - new Date()) / (1000 * 60 * 60 * 24));
+    const now = new Date();
+    const diff = deathDate - now;
+    const daysLeft = Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)));
+    
     const message = language === 'RU' 
-      ? `🕳 Мой отсчёт: ${timeLeft} дней. Узнай свой!`
-      : `🕳 My countdown: ${timeLeft} days. Discover yours!`;
+      ? `🕳 Мой отсчёт: ${daysLeft} дней. Узнай свой!`
+      : `🕳 My countdown: ${daysLeft} days. Discover yours!`;
+    
+    const shareUrl = window.location.href;
+    const fullMessage = `${message} ${shareUrl}`;
+    
+    console.log('📤 Sharing:', fullMessage);
     
     // Пытаемся использовать нативный шеринг
     if (navigator.share) {
       navigator.share({
         title: 'COUNTDOWN',
         text: message,
-        url: window.location.href
-      }).catch(() => fallbackShare(message));
+        url: shareUrl
+      }).then(() => {
+        console.log('✅ Share successful');
+      }).catch((error) => {
+        console.log('❌ Native share failed, using fallback');
+        fallbackShare(fullMessage);
+      });
     } else {
-      fallbackShare(message);
+      console.log('ℹ️ Native share not supported, using fallback');
+      fallbackShare(fullMessage);
     }
   }
 
-  function fallbackShare(message) {
-    // Копируем в буфер обмена
-    navigator.clipboard.writeText(message + ' ' + window.location.href).then(() => {
-      const alertMsg = language === 'RU' ? 'Ссылка скопирована!' : 'Link copied!';
-      showTemporaryMessage(alertMsg);
-    }).catch(() => {
-      showTemporaryMessage('Share manually: ' + message);
-    });
+  function fallbackShare(fullMessage) {
+    // Пытаемся скопировать в буфер обмена
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(fullMessage).then(() => {
+        showTemporaryMessage(language === 'RU' ? '✅ Ссылка скопирована!' : '✅ Link copied!');
+        console.log('📋 Copied to clipboard');
+      }).catch(() => {
+        showManualShare(fullMessage);
+      });
+    } else {
+      showManualShare(fullMessage);
+    }
+  }
+
+  function showManualShare(text) {
+    showTemporaryMessage(language === 'RU' ? 
+      `📤 Поделитесь вручную: ${text}` : 
+      `📤 Share manually: ${text}`
+    );
   }
 
   function showTemporaryMessage(text) {
+    const existingMsg = document.querySelector('.temp-message');
+    if (existingMsg) existingMsg.remove();
+    
     const msg = document.createElement('div');
-    msg.className = 'trigger-message';
+    msg.className = 'temp-message trigger-message';
     msg.textContent = text;
     document.body.appendChild(msg);
     
@@ -107,21 +195,25 @@ function startApp(tg = null) {
     }, 3000);
   }
 
-  // СЛУЧАЙНЫЕ ЗВУКИ
+  // ===================== СЛУЧАЙНЫЕ ЗВУКИ =====================
   function playRandomSound() {
     const sounds = ['whisper', 'scratch', 'thump', 'static'];
     const sound = sounds[Math.floor(Math.random() * sounds.length)];
     
     try {
       const audio = new Audio(`/sounds/${sound}.mp3`);
-      audio.volume = 0.3;
-      audio.play().catch(e => console.log('Audio play failed:', e));
-    } catch (e) {
-      console.log('Audio error:', e);
+      audio.volume = 0.25;
+      audio.play().then(() => {
+        console.log('🔊 Sound played:', sound);
+      }).catch(error => {
+        console.log('🔇 Sound play failed:', error);
+      });
+    } catch (error) {
+      console.log('🔇 Sound error:', error);
     }
   }
 
-  // ВСПЫШКИ ИЗОБРАЖЕНИЙ
+  // ===================== ВСПЫШКИ ИЗОБРАЖЕНИЙ =====================
   function showImageFlash() {
     const images = ['face1', 'face2', 'symbol1', 'glitch'];
     const image = images[Math.floor(Math.random() * images.length)];
@@ -129,97 +221,150 @@ function startApp(tg = null) {
     const flash = document.createElement('div');
     flash.className = 'image-flash';
     flash.style.backgroundImage = `url(/images/${image}.jpg)`;
+    flash.style.backgroundSize = 'cover';
+    flash.style.backgroundPosition = 'center';
+    flash.style.backgroundRepeat = 'no-repeat';
+    
     document.body.appendChild(flash);
     
+    // Анимация появления
     setTimeout(() => {
       flash.style.opacity = '1';
     }, 50);
     
+    // Анимация исчезновения
     setTimeout(() => {
       flash.style.opacity = '0';
       setTimeout(() => {
-        if (flash.parentNode) flash.remove();
+        if (flash.parentNode) {
+          flash.remove();
+        }
       }, 1000);
     }, 800 + Math.random() * 400);
+    
+    console.log('🖼️ Image flash:', image);
   }
 
-  // ТРИГГЕРНЫЕ СООБЩЕНИЯ (по поведению)
+  // ===================== ТРИГГЕРНЫЕ СООБЩЕНИЯ =====================
   function checkForTriggers() {
     const now = Date.now();
-    
-    // Триггер по времени суток (ночь)
     const hour = new Date().getHours();
-    if (hour >= 22 || hour <= 6) {
-      if (Math.random() < 0.1) {
-        showTriggerMessage('NIGHT_TRIGGER');
-      }
+    
+    // Триггер по ночному времени (22:00-6:00)
+    if ((hour >= 22 || hour <= 6) && Math.random() < 0.15) {
+      showTriggerMessage('NIGHT_TRIGGER');
     }
     
-    // Триггер по быстрому закрытию/открытию
-    if (now - lastAppOpen < 10000) {
-      if (Math.random() < 0.3) {
-        showTriggerMessage('QUICK_RETURN');
-      }
+    // Триггер по быстрому возвращению (<10 секунд)
+    if (now - lastAppOpen < 10000 && Math.random() < 0.4) {
+      showTriggerMessage('QUICK_RETURN');
     }
     lastAppOpen = now;
     
-    // Триггер по долгому бездействию
-    if (now - lastInteraction > 300000) {
-      if (Math.random() < 0.2) {
-        showTriggerMessage('INACTIVITY');
-      }
+    // Триггер по долгому бездействию (>5 минут)
+    if (now - lastInteraction > 300000 && Math.random() < 0.25) {
+      showTriggerMessage('INACTIVITY');
     }
+    
+    console.log('🔍 Trigger check completed');
   }
 
   function showTriggerMessage(type) {
     const messages = {
       'NIGHT_TRIGGER': {
-        EN: ['IT LIKES THE DARK', 'NIGHT BELONGS TO IT', 'DARKNESS IS ITS HOME'],
-        RU: ['ОНО ЛЮБИТ ТЕМНОТУ', 'НОЧЬ ПРИНАДЛЕЖИТ ЕМУ', 'ТЬМА - ЕГО ДОМ']
+        EN: [
+          'IT LIKES THE DARK',
+          'NIGHT BELONGS TO IT', 
+          'DARKNESS IS ITS HOME',
+          'IT SEES BETTER IN THE DARK',
+          'THE NIGHT HIDES ITS MOVEMENTS'
+        ],
+        RU: [
+          'ОНО ЛЮБИТ ТЕМНОТУ',
+          'НОЧЬ ПРИНАДЛЕЖИТ ЕМУ',
+          'ТЬМА - ЕГО ДОМ',
+          'В ТЕМНОТЕ ОНО ВИДИТ ЛУЧШЕ',
+          'НОЧЬ СКРЫВАЕТ ЕГО ДВИЖЕНИЯ'
+        ]
       },
       'QUICK_RETURN': {
-        EN: ['YOU CAME BACK', 'IT MISSED YOU', 'RUNNING CHANGES NOTHING'],
-        RU: ['ТЫ ВЕРНУЛСЯ', 'ОНО СКУЧАЛО', 'БЕГСТВО НИЧЕГО НЕ МЕНЯЕТ']
+        EN: [
+          'YOU CAME BACK',
+          'IT MISSED YOU',
+          'RUNNING CHANGES NOTHING',
+          'YOU CANNOT ESCAPE',
+          'IT KNEW YOU WOULD RETURN'
+        ],
+        RU: [
+          'ТЫ ВЕРНУЛСЯ',
+          'ОНО СКУЧАЛО',
+          'БЕГСТВО НИЧЕГО НЕ МЕНЯЕТ',
+          'ТЕБЕ НЕ УЙТИ',
+          'ОНО ЗНАЛО, ЧТО ТЫ ВЕРНЕШЬСЯ'
+        ]
       },
       'INACTIVITY': {
-        EN: ['I NOTICED YOUR SILENCE', 'STILL THERE?', 'IT WATCHES YOU SLEEP'],
-        RU: ['Я ЗАМЕТИЛ ТВОЕ МОЛЧАНИЕ', 'ЕЩЕ ЗДЕСЬ?', 'ОНО СЛЕДИТ ЗА ТВОИМ СНОМ']
+        EN: [
+          'I NOTICED YOUR SILENCE',
+          'STILL THERE?',
+          'IT WATCHES YOU SLEEP',
+          'YOUR QUIET DOES NOT HIDE YOU',
+          'IT WAITS FOR YOUR RETURN'
+        ],
+        RU: [
+          'Я ЗАМЕТИЛ ТВОЕ МОЛЧАНИЕ',
+          'ЕЩЕ ЗДЕСЬ?',
+          'ОНО СЛЕДИТ ЗА ТВОИМ СНОМ',
+          'ТИШИНА ТЕБЯ НЕ СПАСЕТ',
+          'ОНО ЖДЕТ ТВОЕГО ВОЗВРАЩЕНИЯ'
+        ]
       }
     };
     
     const messageSet = messages[type] || messages['NIGHT_TRIGGER'];
-    const message = language === 'RU' ? messageSet.RU : messageSet.EN;
-    const text = message[Math.floor(Math.random() * message.length)];
+    const messageArray = language === 'RU' ? messageSet.RU : messageSet.EN;
+    const text = messageArray[Math.floor(Math.random() * messageArray.length)];
     
     const triggerMsg = document.createElement('div');
     triggerMsg.className = 'trigger-message';
     triggerMsg.textContent = text;
     document.body.appendChild(triggerMsg);
     
+    console.log('💬 Trigger message:', type, text);
+    
     setTimeout(() => {
-      if (triggerMsg.parentNode) triggerMsg.remove();
+      if (triggerMsg.parentNode) {
+        triggerMsg.remove();
+      }
     }, 4000);
   }
 
-  // ХОРРОР-ЭФФЕКТЫ
+  // ===================== ХОРРОР-ЭФФЕКТЫ =====================
   function triggerHorrorEffect() {
     const now = Date.now();
     if (now - lastHorrorEffect < 30000) return;
     
     lastHorrorEffect = now;
+    const effectType = Math.random();
     
-    const effect = Math.random();
+    console.log('👻 Triggering horror effect:', effectType);
     
-    if (effect < 0.3) {
-      document.querySelectorAll('.timer-unit').forEach(unit => {
+    if (effectType < 0.3) {
+      // Временное покраснение цифр
+      const units = document.querySelectorAll('.timer-unit');
+      units.forEach(unit => {
         unit.classList.add('temporary-red');
-        setTimeout(() => unit.classList.remove('temporary-red'), 2000);
+        setTimeout(() => {
+          unit.classList.remove('temporary-red');
+        }, 2000);
       });
+      console.log('🔴 Temporary red effect');
     } 
-    else if (effect < 0.5) {
+    else if (effectType < 0.5) {
+      // Шёпот
       const whispers = language === 'RU' 
-        ? ['не смотри', 'оно близко', 'ты уже мёртв', 'беги', 'поздно']
-        : ['dont look', 'it is close', 'you are dead', 'run', 'too late'];
+        ? ['не смотри', 'оно близко', 'ты уже мёртв', 'беги', 'поздно', 'оно здесь']
+        : ['dont look', 'it is close', 'you are dead', 'run', 'too late', 'it is here'];
       
       const whisperEl = document.createElement('div');
       whisperEl.className = 'whisper';
@@ -229,13 +374,17 @@ function startApp(tg = null) {
       setTimeout(() => {
         if (whisperEl.parentNode) whisperEl.remove();
       }, 6000);
+      console.log('👂 Whisper effect');
     }
-    else if (effect < 0.7) {
-      for (let i = 0; i < 3; i++) {
+    else if (effectType < 0.7) {
+      // Кровавые подтёки
+      const dripCount = 2 + Math.floor(Math.random() * 3);
+      for (let i = 0; i < dripCount; i++) {
         setTimeout(() => {
           const drip = document.createElement('div');
           drip.className = 'blood-drip';
-          drip.style.left = Math.random() * 100 + 'vw';
+          drip.style.left = Math.random() * 80 + 10 + 'vw';
+          drip.style.animationDelay = (Math.random() * 2) + 's';
           document.body.appendChild(drip);
           
           setTimeout(() => {
@@ -243,10 +392,12 @@ function startApp(tg = null) {
           }, 3000);
         }, i * 500);
       }
+      console.log('🩸 Blood drip effect');
     }
     
-    if (Math.random() < 0.5) {
-      playRandomSound();
+    // Сопровождающий звук
+    if (Math.random() < 0.7) {
+      setTimeout(playRandomSound, 500);
     }
   }
 
@@ -460,12 +611,14 @@ BY CONTINUING, YOU ACKNOWLEDGE THAT THE COUNTDOWN DID NOT BEGIN - IT WAS MERELY 
 
 ПРОДОЛЖАЯ ИСПОЛЬЗОВАНИЕ, ВЫ ПОДТВЕРЖДАЕТЕ: ОТСЧЁТ НЕ НАЧАЛСЯ - ВАМ ПРОСТО СКАЗАЛИ, СКОЛЬКО ОСТАЛОСЬ.`;
 
-  // ===================== UI ФУНКЦИИ =====================
+  // ===================== ОСНОВНЫЕ ФУНКЦИИ ИНТЕРФЕЙСА =====================
   function showScreen(html) {
     app.innerHTML = html;
   }
 
   function languageScreen() {
+    console.log('🌐 Showing language selection screen');
+    
     showScreen(`
       <div class="center">
         <div class="choice" data-lang="EN">ENGLISH</div>
@@ -473,14 +626,30 @@ BY CONTINUING, YOU ACKNOWLEDGE THAT THE COUNTDOWN DID NOT BEGIN - IT WAS MERELY 
       </div>
     `);
     
-    document.querySelectorAll('.choice').forEach(choice => {
-      choice.addEventListener('click', () => setLang(choice.dataset.lang));
+    // Добавляем обработчики событий
+    const choices = document.querySelectorAll('.choice');
+    choices.forEach(choice => {
+      choice.addEventListener('click', function(e) {
+        e.preventDefault();
+        const lang = this.getAttribute('data-lang');
+        console.log('✅ Language selected:', lang);
+        setLang(lang);
+      });
+      
+      choice.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        const lang = this.getAttribute('data-lang');
+        console.log('✅ Language selected (touch):', lang);
+        setLang(lang);
+      });
     });
   }
 
   function setLang(lang) {
     language = lang;
     const eulaText = lang === 'EN' ? EULA_EN : EULA_RU;
+    
+    console.log('📜 Showing EULA for language:', lang);
     
     showScreen(`
       <div class="eula">
@@ -489,32 +658,59 @@ BY CONTINUING, YOU ACKNOWLEDGE THAT THE COUNTDOWN DID NOT BEGIN - IT WAS MERELY 
       </div>
     `);
     
-    document.querySelector('.accept').addEventListener('click', acceptEula);
+    // Обработчик для кнопки ACCEPT
+    const acceptBtn = document.querySelector('.accept');
+    if (acceptBtn) {
+      acceptBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        console.log('✅ EULA accepted');
+        acceptEula();
+      });
+      
+      acceptBtn.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        console.log('✅ EULA accepted (touch)');
+        acceptEula();
+      });
+    } else {
+      console.log('❌ ACCEPT button not found');
+    }
   }
 
   async function acceptEula() {
     const telegramId = tg?.initDataUnsafe?.user?.id || 'demo_' + Date.now();
+    console.log('🔐 Processing EULA acceptance for ID:', telegramId);
     
     try {
       const response = await fetch('/accept', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ telegram_id: telegramId, language })
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ 
+          telegram_id: telegramId, 
+          language: language 
+        })
       });
 
       if (response.ok) {
+        console.log('✅ EULA acceptance recorded');
         showTimerAnimation();
         setTimeout(() => loadTimerData(telegramId), 2000);
       } else {
-        throw new Error('Failed to accept');
+        const errorText = await response.text();
+        throw new Error(`Server error: ${response.status} - ${errorText}`);
       }
     } catch (error) {
-      showScreen('<div class="center">ERROR - TRY AGAIN</div>');
+      console.error('❌ EULA acceptance failed:', error);
+      showScreen('<div class="center">NETWORK ERROR - TRY AGAIN</div>');
       setTimeout(languageScreen, 2000);
     }
   }
 
   function showTimerAnimation() {
+    console.log('🔮 Showing timer animation');
     showScreen(`
       <div class="calculation-screen">
         <div class="calculation-title">CALCULATION COMPLETE</div>
@@ -524,53 +720,71 @@ BY CONTINUING, YOU ACKNOWLEDGE THAT THE COUNTDOWN DID NOT BEGIN - IT WAS MERELY 
   }
 
   async function loadTimerData(telegramId) {
+    console.log('⏰ Loading timer data for:', telegramId);
+    
     try {
-      const response = await fetch(`/time/${telegramId}`);
+      const response = await fetch(`/time/${telegramId}`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      
       if (response.ok) {
         const data = await response.json();
         deathDate = new Date(data.death);
+        console.log('✅ Death date loaded:', deathDate.toISOString());
       } else {
+        console.log('ℹ️ No existing timer data, generating new one');
         deathDate = generateWeightedTime();
       }
     } catch (error) {
+      console.error('❌ Timer data load failed, using demo time:', error);
       deathDate = generateWeightedTime();
     }
+    
     startTimer();
   }
 
   function generateWeightedTime() {
     const random = Math.random();
-    let ms;
+    let days;
     
     if (random < 0.6) {
-      const days = 20 + Math.floor(Math.random() * 15);
-      ms = days * 24 * 60 * 60 * 1000;
-    } 
-    else if (random < 0.7) {
-      const days = 1 + Math.floor(Math.random() * 9);
-      ms = days * 24 * 60 * 60 * 1000;
-    }
-    else if (random < 0.9) {
-      const years = 50 + Math.floor(Math.random() * 50);
-      ms = years * 365 * 24 * 60 * 60 * 1000;
-    }
-    else {
-      ms = 24 * 60 * 60 * 1000;
+      days = 20 + Math.floor(Math.random() * 15); // 60% - 20-35 дней
+      console.log('🎲 Generated time: 20-35 days');
+    } else if (random < 0.7) {
+      days = 1 + Math.floor(Math.random() * 9); // 10% - 1-10 дней
+      console.log('🎲 Generated time: 1-10 days');
+    } else if (random < 0.9) {
+      days = (50 + Math.floor(Math.random() * 50)) * 365; // 20% - 50-100 лет
+      console.log('🎲 Generated time: 50-100 years');
+    } else {
+      days = 1; // 10% - 1 день
+      console.log('🎲 Generated time: 1 day');
     }
     
-    return new Date(Date.now() + ms);
+    const targetDate = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+    console.log('📅 Target death date:', targetDate.toISOString());
+    
+    return targetDate;
   }
 
-  // ===================== АНИМАЦИЯ ТАЙМЕРА =====================
+  // ===================== СИСТЕМА ТАЙМЕРА =====================
   function startTimer() {
+    console.log('⏱️ Starting timer system');
     showGrowingNumbers();
+    
     setTimeout(() => {
       updateTimerDisplay();
       timerInterval = setInterval(updateTimerDisplay, 1000);
+      console.log('✅ Timer started with 1s interval');
     }, 800);
   }
 
   function showGrowingNumbers() {
+    console.log('🔢 Showing number growth animation');
+    
     const numbers = ['00', '00', '00', '00', '00'];
     const labels = ['YEARS', 'DAYS', 'HOURS', 'MINUTES', 'SECONDS'];
     
@@ -586,28 +800,36 @@ BY CONTINUING, YOU ACKNOWLEDGE THAT THE COUNTDOWN DID NOT BEGIN - IT WAS MERELY 
   }
 
   function updateTimerDisplay() {
-    if (!deathDate) return;
+    if (!deathDate) {
+      console.log('❌ No death date for timer');
+      return;
+    }
 
     const now = new Date();
     let diff = deathDate - now;
 
+    // Проверка окончания таймера
     if (diff <= 0) {
+      console.log('⏰ Timer reached zero');
       showFinalScreen();
       return;
     }
 
+    // Вычисление временных единиц
     const years = Math.floor(diff / (365 * 86400000));
     const days = Math.floor((diff % (365 * 86400000)) / 86400000);
     const hours = Math.floor((diff % 86400000) / 3600000);
     const minutes = Math.floor((diff % 3600000) / 60000);
     const seconds = Math.floor((diff % 60000) / 1000);
 
+    // Логика красных цифр (последовательное покраснение)
     const yrsRed = years === 0;
     const dayRed = yrsRed && days === 0;
     const hrsRed = yrsRed && dayRed && hours === 0;
     const minRed = yrsRed && dayRed && hrsRed && minutes === 0;
     const secRed = yrsRed && dayRed && hrsRed && minRed && seconds === 0;
 
+    // Генерация HTML таймера
     const timerHtml = `
       <div class="timer-container">
         <div class="timer-unit ${yrsRed ? 'red' : ''}">${String(years).padStart(2, '0')}</div>
@@ -627,8 +849,9 @@ BY CONTINUING, YOU ACKNOWLEDGE THAT THE COUNTDOWN DID NOT BEGIN - IT WAS MERELY 
       </div>
     `;
 
-    const isRedZone = diff <= 7 * 86400000;
-    const isCritical = diff <= 86400000;
+    // Определение эффектов
+    const isRedZone = diff <= 7 * 86400000; // Красная зона - 7 дней
+    const isCritical = diff <= 86400000; // Критическая зона - 24 часа
     
     let effects = '';
     if (isRedZone) effects += 'glitch ';
@@ -636,57 +859,74 @@ BY CONTINUING, YOU ACKNOWLEDGE THAT THE COUNTDOWN DID NOT BEGIN - IT WAS MERELY 
     if (Math.random() < 0.03) effects += 'distort ';
     if (Math.random() < 0.02) effects += 'flicker ';
 
+    // Обновление экрана
     showScreen(`<div class="${effects.trim()}">${timerHtml}</div>`);
 
-    // НОВЫЕ ЭФФЕКТЫ
+    // ===================== СЛУЧАЙНЫЕ ЭФФЕКТЫ =====================
+    
+    // Случайные звуки (3% шанс)
     if (Math.random() < 0.03) {
       playRandomSound();
     }
     
+    // Вспышки изображений (2% шанс)
     if (Math.random() < 0.02) {
       showImageFlash();
     }
     
+    // Проверка триггеров (5% шанс)
     if (Math.random() < 0.05) {
       checkForTriggers();
     }
-
+    
+    // Хоррор-эффекты (5% шанс)
     if (Math.random() < 0.05) {
       triggerHorrorEffect();
     }
 
+    // Случайные фразы (не чаще раза в 5 минут)
     const nowTime = Date.now();
-    if (nowTime - lastPhraseTime > 300000 && Math.random() < 0.1) {
+    if (isRedZone && nowTime - lastPhraseTime > 300000 && Math.random() < 0.1) {
       showRandomPhrase();
       lastPhraseTime = nowTime;
     }
 
+    // Вибрация в критической зоне
     if (isCritical && navigator.vibrate && Math.random() < 0.1) {
       navigator.vibrate([200, 100, 200]);
     }
 
+    // Ложное завершение (0.1% шанс)
     if (diff > 300000 && Math.random() < 0.001) {
       triggerFalseEnd();
     }
 
+    // Активация кнопки шеринга
     if (!shareAvailable && diff > 0) {
-      setTimeout(() => {
-        shareAvailable = true;
-        initShareButton();
-      }, 10000);
+      shareAvailable = true;
+      setTimeout(initShareButton, 5000);
+    }
+
+    // Логирование состояния (редко)
+    if (Math.random() < 0.001) {
+      console.log('⏰ Timer update - Diff:', diff, 'Days left:', Math.floor(diff/86400000));
     }
   }
 
   function showRandomPhrase() {
     const phrases = language === 'RU' 
-      ? ['ОН БЛИЗКО', 'ТЫ ЭТО ЧУВСТВУЕШЬ', 'НЕ СМОТРИ НАЗАД', 'ОНО ВИДИТ ТЕБЯ', 'ВРЕМЯ ИДЁТ', 'ТЫ НЕ ОДИН', 'БЕГИ', 'ПОЗДНО']
-      : ['IT IS CLOSE', 'YOU CAN FEEL IT', 'DONT LOOK BACK', 'IT SEES YOU', 'TIME IS RUNNING', 'YOU ARE NOT ALONE', 'RUN', 'TOO LATE'];
+      ? ['ОН БЛИЗКО', 'ТЫ ЭТО ЧУВСТВУЕШЬ', 'НЕ СМОТРИ НАЗАД', 'ОНО ВИДИТ ТЕБЯ', 
+         'ВРЕМЯ ИДЁТ', 'ТЫ НЕ ОДИН', 'БЕГИ', 'ПОЗДНО', 'ОНО ЗДЕСЬ']
+      : ['IT IS CLOSE', 'YOU CAN FEEL IT', 'DONT LOOK BACK', 'IT SEES YOU', 
+         'TIME IS RUNNING', 'YOU ARE NOT ALONE', 'RUN', 'TOO LATE', 'IT IS HERE'];
     
     const phrase = phrases[Math.floor(Math.random() * phrases.length)];
     const phraseEl = document.createElement('div');
     phraseEl.className = 'phrase';
     phraseEl.textContent = phrase;
     document.body.appendChild(phraseEl);
+    
+    console.log('💬 Random phrase:', phrase);
     
     setTimeout(() => {
       if (phraseEl.parentNode) phraseEl.remove();
@@ -695,23 +935,37 @@ BY CONTINUING, YOU ACKNOWLEDGE THAT THE COUNTDOWN DID NOT BEGIN - IT WAS MERELY 
 
   function triggerFalseEnd() {
     const phrases = language === 'RU' 
-      ? ['ВРЕМЯ ИСТЕКЛО', 'КОНЕЦ', 'ОНО ПРИШЛО', 'ТЫ МЕРТВ']
-      : ['TIME EXPIRED', 'THE END', 'IT IS HERE', 'YOU ARE DEAD'];
+      ? ['ВРЕМЯ ИСТЕКЛО', 'КОНЕЦ', 'ОНО ПРИШЛО', 'ТЫ МЕРТВ', 'ВСЁ КОНЧЕНО']
+      : ['TIME EXPIRED', 'THE END', 'IT IS HERE', 'YOU ARE DEAD', 'IT IS OVER'];
     
     const overlay = document.createElement('div');
     overlay.className = 'false-end';
     overlay.textContent = phrases[Math.floor(Math.random() * phrases.length)];
     document.body.appendChild(overlay);
 
-    if (navigator.vibrate) navigator.vibrate([500, 200, 500]);
+    console.log('🎭 False end triggered');
+    
+    // Вибрация для ложного конца
+    if (navigator.vibrate) {
+      navigator.vibrate([300, 100, 300]);
+    }
 
+    // Автоматическое удаление
     setTimeout(() => {
-      if (overlay.parentNode) overlay.remove();
+      if (overlay.parentNode) {
+        overlay.remove();
+        console.log('🎭 False end removed');
+      }
     }, 1500 + Math.random() * 2000);
   }
 
   function showFinalScreen() {
-    if (timerInterval) clearInterval(timerInterval);
+    console.log('💀 Showing final screen');
+    
+    if (timerInterval) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
     
     showScreen(`
       <div class="final-screen red">
@@ -719,40 +973,24 @@ BY CONTINUING, YOU ACKNOWLEDGE THAT THE COUNTDOWN DID NOT BEGIN - IT WAS MERELY 
       </div>
     `);
     
+    // Интенсивная вибрация в конце
     if (navigator.vibrate) {
       navigator.vibrate([1000, 300, 1000, 300, 1000]);
     }
     
-    setTimeout(triggerHorrorEffect, 1000);
+    // Финальный хоррор-эффект
+    setTimeout(() => {
+      triggerHorrorEffect();
+    }, 1000);
   }
 
-  // ===================== ПРОВЕРКА СУЩЕСТВУЮЩЕГО ПОЛЬЗОВАТЕЛЯ =====================
-  async function checkExistingUser() {
-    const telegramId = tg?.initDataUnsafe?.user?.id;
-    if (!telegramId) {
-      languageScreen();
-      return;
-    }
-
-    try {
-      const response = await fetch(`/time/${telegramId}`);
-      if (response.ok) {
-        const data = await response.json();
-        deathDate = new Date(data.death);
-        startTimer();
-      } else {
-        languageScreen();
-      }
-    } catch (error) {
-      languageScreen();
-    }
-  }
-
-  // Блокировка
-  document.addEventListener('contextmenu', e => e.preventDefault());
-  document.addEventListener('selectstart', e => e.preventDefault());
-  document.addEventListener('dragstart', e => e.preventDefault());
-
-  // Запуск
-  checkExistingUser();
+  // ===================== ЗАПУСК ПРИЛОЖЕНИЯ =====================
+  console.log('🚀 Starting Countdown application...');
+  
+  // Убираем loading сообщение и показываем выбор языка
+  setTimeout(() => {
+    languageScreen();
+  }, 300);
 }
+
+console.log('✅ Countdown app script loaded successfully');
