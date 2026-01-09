@@ -676,7 +676,8 @@ BY CONTINUING, YOU ACKNOWLEDGE THAT THE COUNTDOWN DID NOT BEGIN - IT WAS MERELY 
       console.log('❌ ACCEPT button not found');
     }
   }
-async function acceptEula() {
+
+  async function acceptEula() {
     const telegramId = tg?.initDataUnsafe?.user?.id || 'demo_' + Date.now();
     console.log('🔐 Processing EULA acceptance for ID:', telegramId);
     
@@ -1007,4 +1008,3 @@ async function acceptEula() {
 }
 
 console.log('✅ Countdown app script loaded successfully');
-
