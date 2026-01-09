@@ -210,3 +210,19 @@ export const EULA_RU = `
 
 ПРОДОЛЖАЯ ИСПОЛЬЗОВАНИЕ, ВЫ ПОДТВЕРЖДАЕТЕ: ОТСЧЁТ НЕ НАЧАЛСЯ — ВАМ ПРОСТО СКАЗАЛИ, СКОЛЬКО ОСТАЛОСЬ.
 `;
+export const EULA_QUOTES_EN = [
+  "Refusal is no longer possible.",
+  "The countdown did not begin — it was merely revealed.",
+  "Any attempt to avoid participation may accelerate execution.",
+  "User termination rights do not exist.",
+  "No jurisdiction shall have authority to compel remedy."
+];
+
+export const EULA_QUOTES_RU = [
+  "Отказ более невозможен.",
+  "Отсчёт не начался — его лишь раскрыли.",
+  "Любая попытка избежать участия может ускорить завершение.",
+  "Право на прекращение не существует.",
+  "Ни одна система не обладает властью вмешаться."
+];
+
