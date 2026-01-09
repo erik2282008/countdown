@@ -281,9 +281,9 @@ BY CONTINUING, YOU ACKNOWLEDGE THAT THE COUNTDOWN DID NOT BEGIN - IT WAS MERELY 
 
   function showTimerAnimation() {
     showScreen(`
-      <div class="center">
-        <div style="font-size: 24px; margin-bottom: 20px;">CALCULATION COMPLETE</div>
-        <div style="font-size: 20px;">YOUR TIME HAS BEEN REVEALED</div>
+      <div class="calculation-screen">
+        <div class="calculation-title">CALCULATION COMPLETE</div>
+        <div class="calculation-subtitle">YOUR TIME HAS BEEN REVEALED</div>
       </div>
     `);
   }
@@ -295,7 +295,6 @@ BY CONTINUING, YOU ACKNOWLEDGE THAT THE COUNTDOWN DID NOT BEGIN - IT WAS MERELY 
         const data = await response.json();
         deathDate = new Date(data.death);
       } else {
-        // Если нет в базе, создаем демо-таймер
         deathDate = generateDemoTime();
       }
     } catch (error) {
@@ -347,29 +346,30 @@ BY CONTINUING, YOU ACKNOWLEDGE THAT THE COUNTDOWN DID NOT BEGIN - IT WAS MERELY 
     const minutes = Math.floor((diff % 3600000) / 60000);
     const seconds = Math.floor((diff % 60000) / 1000);
 
-    // Логика красных цифр: каждая следующая становится красной когда предыдущая достигла 00
+    // Логика красных цифр
     const yrsRed = years === 0;
     const dayRed = yrsRed && days === 0;
     const hrsRed = yrsRed && dayRed && hours === 0;
     const minRed = yrsRed && dayRed && hrsRed && minutes === 0;
     const secRed = yrsRed && dayRed && hrsRed && minRed && seconds === 0;
 
+    // КРУПНЫЙ ТАЙМЕР
     const timerHtml = `
       <div class="timer-container">
         <div class="timer-unit ${yrsRed ? 'red' : ''}">${String(years).padStart(2, '0')}</div>
-        <div class="timer-label">YRS</div>
+        <div class="timer-label">YEARS</div>
         
         <div class="timer-unit ${dayRed ? 'red' : ''}">${String(days).padStart(2, '0')}</div>
-        <div class="timer-label">DAY</div>
+        <div class="timer-label">DAYS</div>
         
         <div class="timer-unit ${hrsRed ? 'red' : ''}">${String(hours).padStart(2, '0')}</div>
-        <div class="timer-label">HRS</div>
+        <div class="timer-label">HOURS</div>
         
         <div class="timer-unit ${minRed ? 'red' : ''}">${String(minutes).padStart(2, '0')}</div>
-        <div class="timer-label">MIN</div>
+        <div class="timer-label">MINUTES</div>
         
         <div class="timer-unit ${secRed ? 'red' : ''}">${String(seconds).padStart(2, '0')}</div>
-        <div class="timer-label">SEC</div>
+        <div class="timer-label">SECONDS</div>
       </div>
     `;
 
@@ -384,7 +384,7 @@ BY CONTINUING, YOU ACKNOWLEDGE THAT THE COUNTDOWN DID NOT BEGIN - IT WAS MERELY 
 
     showScreen(`<div class="${effects.trim()}">${timerHtml}</div>`);
 
-    // Случайные фразы (не чаще раза в 10 минут)
+    // Случайные фразы
     const nowTime = Date.now();
     if (isRedZone && nowTime - lastPhraseTime > 600000 && Math.random() < 0.1) {
       showRandomPhrase();
