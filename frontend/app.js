@@ -7,7 +7,7 @@ let language = null;
 let deathDate = null;
 let lastPhraseDay = null;
 
-// ===================== EULA =====================
+// ===================== EULA TEXTS =====================
 const EULA_EN = `
 END USER LICENSE AGREEMENT
 ABSOLUTE & IRREVOCABLE VERSION
@@ -221,7 +221,7 @@ const EULA_RU = `
 ПРОДОЛЖАЯ ИСПОЛЬЗОВАНИЕ, ВЫ ПОДТВЕРЖДАЕТЕ: ОТСЧЁТ НЕ НАЧАЛСЯ — ВАМ ПРОСТО СКАЗАЛИ, СКОЛЬКО ОСТАЛОСЬ.
 `;
 
-// ===================== UI =====================
+// ===================== UI SCREENS =====================
 function languageScreen() {
   app.innerHTML = `
     <div class="center">
@@ -241,37 +241,56 @@ window.setLang = (l) => {
   `;
 };
 
-async function accept() {
-  await fetch('/accept', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      telegram_id: tg.initDataUnsafe.user.id,
-      language
-    })
-  });
+window.accept = async () => {
+  if (!tg.initDataUnsafe?.user?.id) {
+    console.error('No Telegram user ID');
+    return;
+  }
 
-  app.innerHTML = '';
-  setTimeout(() => {
-    app.innerHTML = `
-      <div class="center">
-        CALCULATION COMPLETE<br>
-        YOUR TIME HAS BEEN REVEALED
-      </div>
-    `;
-    setTimeout(loadTimer, 1500);
-  }, 1200);
-}
+  try {
+    await fetch('/accept', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        telegram_id: tg.initDataUnsafe.user.id,
+        language
+      })
+    });
+
+    app.innerHTML = '';
+    
+    setTimeout(() => {
+      app.innerHTML = `
+        <div class="center">
+          CALCULATION COMPLETE<br>
+          YOUR TIME HAS BEEN REVEALED
+        </div>
+      `;
+      setTimeout(loadTimer, 1500);
+    }, 1200);
+  } catch (error) {
+    console.error('Accept error:', error);
+  }
+};
 
 async function loadTimer() {
-  const res = await fetch(`/time/${tg.initDataUnsafe.user.id}`);
-  const data = await res.json();
-  deathDate = new Date(data.death);
-  setInterval(updateTimer, 1000);
+  if (!tg.initDataUnsafe?.user?.id) return;
+
+  try {
+    const res = await fetch(`/time/${tg.initDataUnsafe.user.id}`);
+    const data = await res.json();
+    deathDate = new Date(data.death);
+    updateTimer();
+    setInterval(updateTimer, 1000);
+  } catch (error) {
+    console.error('Timer load error:', error);
+  }
 }
 
-// ===================== TIMER =====================
+// ===================== TIMER LOGIC =====================
 function updateTimer() {
+  if (!deathDate) return;
+
   const now = new Date();
   let diff = deathDate - now;
 
@@ -280,7 +299,7 @@ function updateTimer() {
     return;
   }
 
-  let sec = Math.floor(diff / 1000) % 60;
+  const sec = Math.floor(diff / 1000) % 60;
   const min = Math.floor(diff / 60000) % 60;
   const hrs = Math.floor(diff / 3600000) % 24;
   const day = Math.floor(diff / 86400000) % 365;
@@ -292,14 +311,15 @@ function updateTimer() {
   if (daysLeft <= 7) cls = 'red glitch';
   if (diff <= 86400000) cls = 'red glitch blink';
 
-  // ложный нулевой экран
+  // Ложное завершение
   if (Math.random() < 0.001 && diff > 300000) {
     triggerFalseEnd();
   }
 
-  // сбой секунд в последние минуты
+  // Сбой секунд в последние минуты
+  let displaySec = sec;
   if (diff <= 300000 && Math.random() < 0.1) {
-    sec = Math.floor(Math.random() * 60);
+    displaySec = Math.floor(Math.random() * 60);
   }
 
   maybePhrase(daysLeft);
@@ -310,26 +330,13 @@ function updateTimer() {
       ${String(day).padStart(2,'0')} DAY<br>
       ${String(hrs).padStart(2,'0')} HRS<br>
       ${String(min).padStart(2,'0')} MIN<br>
-      ${String(sec).padStart(2,'0')} SEC
+      ${String(displaySec).padStart(2,'0')} SEC
     </div>
   `;
 
-  // звук + вибрация за 24 часа
+  // Звук + вибрация за 24 часа
   if (diff <= 86400000) {
     if (navigator.vibrate) navigator.vibrate([200,100,200]);
-    const audio = new Audio('/noise.mp3');
-    audio.volume = 0.05;
-    audio.play().catch(()=>{});
-  }
-
-  // микросбои
-  if (Math.random() < 0.005) {
-    document.body.style.transform = 'translate(1px,-1px)';
-    setTimeout(()=>document.body.style.transform='translate(0,0)',50);
-  }
-  if (Math.random() < 0.003) {
-    document.body.style.filter = 'invert(1)';
-    setTimeout(()=>document.body.style.filter='invert(0)',80);
   }
 }
 
@@ -338,14 +345,15 @@ function maybePhrase(daysLeft) {
   const today = new Date().toDateString();
   if (daysLeft <= 7 && today !== lastPhraseDay && Math.random() < 0.1) {
     lastPhraseDay = today;
-    const phrases = language === 'RU'
+    const phrases = language === 'RU' 
       ? ['ТЫ НЕ ОДИН','ВРЕМЯ ИДЁТ','ОН БЛИЗКО','ТЫ ЭТО ЧУВСТВУЕШЬ']
       : ['YOU ARE NOT ALONE','TIME IS RUNNING','IT IS CLOSE','YOU CAN FEEL IT'];
+    
     const el = document.createElement('div');
     el.className = 'phrase';
     el.innerText = phrases[Math.floor(Math.random()*phrases.length)];
     document.body.appendChild(el);
-    setTimeout(()=>el.remove(),4000);
+    setTimeout(() => el.remove(), 4000);
   }
 }
 
@@ -363,40 +371,30 @@ function triggerFalseEnd() {
   document.body.appendChild(overlay);
 
   if (navigator.vibrate) navigator.vibrate([300,100,300]);
-  const audio = new Audio('/noise.mp3');
-  audio.volume = 0.25;
-  audio.play().catch(()=>{});
 
-  setTimeout(()=>overlay.remove(),1000 + Math.random()*3000);
+  setTimeout(() => overlay.remove(), 1000 + Math.random()*3000);
 }
 
 // ===================== REAL END =====================
 function endSequence() {
-  document.body.innerHTML = '';
-  document.body.style.background = 'black';
-
+  app.innerHTML = '';
+  
   setTimeout(() => {
-    const msg = document.createElement('div');
-    msg.style.color = 'red';
-    msg.style.fontFamily = 'monospace';
-    msg.style.fontSize = '28px';
-    msg.style.textAlign = 'center';
-    msg.style.marginTop = '40vh';
-    msg.innerText = language === 'RU'
-      ? 'ОНО ИДЕТ ЗА ТОБОЙ'
-      : 'IT IS COMING FOR YOU';
-    document.body.appendChild(msg);
+    app.innerHTML = `
+      <div class="center red" style="font-size: 28px;">
+        ${language === 'RU' ? 'ОНО ИДЁТ ЗА ТОБОЙ' : 'IT IS COMING FOR YOU'}
+      </div>
+    `;
 
     if (navigator.vibrate) navigator.vibrate([500,200,500,200,500]);
-    const audio = new Audio('/noise.mp3');
-    audio.volume = 0.2;
-    audio.play().catch(()=>{});
   }, 1000);
 }
 
-// блокировки
+// ===================== START =====================
 document.addEventListener('contextmenu', e => e.preventDefault());
 window.onbeforeunload = () => true;
 
-// старт
-languageScreen();
+// Запуск
+setTimeout(() => {
+  languageScreen();
+}, 500);
