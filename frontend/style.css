@@ -1,0 +1,158 @@
+* {
+  box-sizing: border-box;
+  user-select: none;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: black;
+  color: white;
+  font-family: monospace;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+#app {
+  width: 100%;
+  height: 100%;
+}
+
+/* ---------- ОБЩЕЕ ---------- */
+.center {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.choice {
+  font-size: 24px;
+  margin: 20px;
+  cursor: pointer;
+}
+
+.choice:hover {
+  color: red;
+}
+
+/* ---------- EULA ---------- */
+.eula {
+  width: 100%;
+  height: 100%;
+  overflow-y: scroll;
+  padding: 20px;
+}
+
+.eula pre {
+  white-space: pre-wrap;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.accept {
+  margin: 30px auto;
+  font-size: 24px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.accept:hover {
+  color: red;
+}
+
+/* ---------- ТАЙМЕР ---------- */
+#timer {
+  font-size: 32px;
+  text-align: center;
+  letter-spacing: 2px;
+}
+
+.red {
+  color: red;
+}
+
+/* ---------- GLITCH ---------- */
+.glitch {
+  animation: glitch 0.2s infinite;
+}
+
+@keyframes glitch {
+  0%   { transform: translate(0); }
+  25%  { transform: translate(-1px, 1px); }
+  50%  { transform: translate(1px, -1px); }
+  75%  { transform: translate(-1px, -1px); }
+  100% { transform: translate(0); }
+}
+
+/* ---------- МИГАНИЕ ---------- */
+.blink {
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
+/* ---------- ФРАЗЫ ---------- */
+.phrase {
+  position: fixed;
+  bottom: 20%;
+  width: 100%;
+  text-align: center;
+  color: red;
+  font-size: 18px;
+  pointer-events: none;
+}
+
+/* ---------- ЛОЖНЫЙ КОНЕЦ ---------- */
+.false-end {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: black;
+  color: red;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 26px;
+  z-index: 9999;
+  animation: shake 0.15s infinite;
+}
+
+@keyframes shake {
+  0%   { transform: translate(0); }
+  25%  { transform: translate(-2px, 1px); }
+  50%  { transform: translate(2px, -1px); }
+  75%  { transform: translate(-1px, -2px); }
+  100% { transform: translate(0); }
+}
+
+/* ---------- ИСКАЖЕНИЕ ---------- */
+.distort {
+  animation: distort 0.3s infinite;
+}
+
+@keyframes distort {
+  0%   { letter-spacing: 0; }
+  50%  { letter-spacing: 2px; }
+  100% { letter-spacing: 0; }
+}
+
+/* ---------- ШЁПОТ ---------- */
+.whisper {
+  position: fixed;
+  top: 50%;
+  width: 100%;
+  text-align: center;
+  color: rgba(255, 0, 0, 0.15);
+  font-size: 20px;
+  pointer-events: none;
+}
