@@ -1,54 +1,63 @@
 import { pool } from './db.js';
-import { bot } from './bot.js';
+import { sendWarningMessage } from './bot.js';
 import { PHRASES_7D, PHRASES_24H } from './phrases.js';
 
 function random(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-// Проверка каждую минуту
+// Проверка каждые 30 секунд
 setInterval(async () => {
   const now = new Date();
 
-  const { rows } = await pool.query(`
-    SELECT telegram_id, death_timestamp, warned_7d, warned_24h, extensions
-    FROM users
-    WHERE ended = FALSE
-  `);
+  try {
+    const { rows } = await pool.query(`
+      SELECT telegram_id, death_timestamp, warned_7d, warned_24h, ended
+      FROM users 
+      WHERE ended = FALSE
+    `);
 
-  for (const u of rows) {
-    const diff = new Date(u.death_timestamp) - now;
+    for (const user of rows) {
+      const diff = new Date(user.death_timestamp) - now;
+      const daysLeft = Math.floor(diff / (1000 * 60 * 60 * 24));
 
-    // --- За 7 дней ---
-    if (diff <= 7 * 86400000 && diff > 86400000 && !u.warned_7d) {
-      try {
-        await bot.sendMessage(u.telegram_id, random(PHRASES_7D));
-      } catch (_) {}
+      // --- За 7 дней ---
+      if (diff <= 7 * 86400000 && diff > 86400000 && !user.warned_7d) {
+        try {
+          await sendWarningMessage(user.telegram_id, random(PHRASES_7D));
+          await pool.query(
+            'UPDATE users SET warned_7d = TRUE WHERE telegram_id = $1',
+            [user.telegram_id]
+          );
+        } catch (error) {
+          console.error('Failed to send 7-day warning:', error);
+        }
+      }
 
-      await pool.query(
-        'UPDATE users SET warned_7d = TRUE WHERE telegram_id = $1',
-        [u.telegram_id]
-      );
+      // --- За 24 часа ---
+      if (diff <= 86400000 && diff > 0 && !user.warned_24h) {
+        try {
+          await sendWarningMessage(user.telegram_id, random(PHRASES_24H));
+          await pool.query(
+            'UPDATE users SET warned_24h = TRUE WHERE telegram_id = $1',
+            [user.telegram_id]
+          );
+        } catch (error) {
+          console.error('Failed to send 24-hour warning:', error);
+        }
+      }
+
+      // --- Отметка окончания ---
+      if (diff <= 0 && !user.ended) {
+        await pool.query(
+          'UPDATE users SET ended = TRUE WHERE telegram_id = $1',
+          [user.telegram_id]
+        );
+      }
     }
-
-    // --- За 24 часа ---
-    if (diff <= 86400000 && diff > 0 && !u.warned_24h) {
-      try {
-        await bot.sendMessage(u.telegram_id, random(PHRASES_24H));
-      } catch (_) {}
-
-      await pool.query(
-        'UPDATE users SET warned_24h = TRUE WHERE telegram_id = $1',
-        [u.telegram_id]
-      );
-    }
-
-    // --- Усиление от отсрочек (редкие дополнительные сообщения) ---
-    const accelChance = Math.min(0.05, (u.extensions || 0) * 0.01);
-    if (Math.random() < accelChance) {
-      try {
-        await bot.sendMessage(u.telegram_id, 'IT IS WATCHING YOU');
-      } catch (_) {}
-    }
+  } catch (error) {
+    console.error('Watcher error:', error);
   }
-}, 60000);
+}, 30000); // Проверка каждые 30 секунд
+
+console.log('👀 WATCHER STARTED - Checking every 30 seconds');
