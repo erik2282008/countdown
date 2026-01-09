@@ -1,20 +1,23 @@
-import pkg from 'pg';
+import pg from 'pg';
 
-const { Pool } = pkg;
+const { Pool } = pg;
+
+if (!process.env.DATABASE_URL) {
+  console.error('DATABASE_URL is not set');
+  process.exit(1);
+}
 
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production'
-    ? { rejectUnauthorized: false }
-    : false
+  ssl: {
+    rejectUnauthorized: false
+  }
 });
 
-// ---------- ПРОВЕРКА ПОДКЛЮЧЕНИЯ ----------
-pool.on('connect', () => {
-  console.log('DATABASE CONNECTED');
-});
-
-pool.on('error', (err) => {
-  console.error('DATABASE ERROR', err);
-  process.exit(1);
-});
+pool.query('SELECT 1')
+  .then(() => console.log('DATABASE CONNECTED'))
+  .catch(err => {
+    console.error('DATABASE CONNECTION FAILED');
+    console.error(err);
+    process.exit(1);
+  });
