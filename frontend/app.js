@@ -676,17 +676,21 @@ BY CONTINUING, YOU ACKNOWLEDGE THAT THE COUNTDOWN DID NOT BEGIN - IT WAS MERELY 
       console.log('❌ ACCEPT button not found');
     }
   }
-
-  async function acceptEula() {
+async function acceptEula() {
     const telegramId = tg?.initDataUnsafe?.user?.id || 'demo_' + Date.now();
     console.log('🔐 Processing EULA acceptance for ID:', telegramId);
     
     try {
+      // Проверяем доступность сервера
+      const healthResponse = await fetch('/health');
+      if (!healthResponse.ok) {
+        throw new Error('Server not responding');
+      }
+      
       const response = await fetch('/accept', {
         method: 'POST',
         headers: { 
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ 
           telegram_id: telegramId, 
@@ -694,18 +698,27 @@ BY CONTINUING, YOU ACKNOWLEDGE THAT THE COUNTDOWN DID NOT BEGIN - IT WAS MERELY 
         })
       });
 
+      console.log('📡 Response status:', response.status);
+      
       if (response.ok) {
-        console.log('✅ EULA acceptance recorded');
+        const data = await response.json();
+        console.log('✅ EULA acceptance successful:', data);
         showTimerAnimation();
         setTimeout(() => loadTimerData(telegramId), 2000);
       } else {
         const errorText = await response.text();
-        throw new Error(`Server error: ${response.status} - ${errorText}`);
+        console.error('❌ Server error:', response.status, errorText);
+        throw new Error(`Server error: ${response.status}`);
       }
     } catch (error) {
       console.error('❌ EULA acceptance failed:', error);
-      showScreen('<div class="center">NETWORK ERROR - TRY AGAIN</div>');
-      setTimeout(languageScreen, 2000);
+      showScreen(`
+        <div class="center">
+          <div style="color: red; font-size: 20px;">NETWORK ERROR</div>
+          <div style="margin-top: 20px; font-size: 16px;">Please check your connection</div>
+          <div class="choice" onclick="location.reload()">RETRY</div>
+        </div>
+      `);
     }
   }
 
@@ -994,3 +1007,4 @@ BY CONTINUING, YOU ACKNOWLEDGE THAT THE COUNTDOWN DID NOT BEGIN - IT WAS MERELY 
 }
 
 console.log('✅ Countdown app script loaded successfully');
+
