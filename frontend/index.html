@@ -4,41 +4,38 @@
   <meta charset="UTF-8">
   <title>COUNTDOWN</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body { 
-      background: black; 
-      color: white; 
-      margin: 0; 
-      padding: 0; 
-      font-family: monospace;
-    }
-    #app { 
-      width: 100vw; 
-      height: 100vh; 
-      display: flex; 
-      align-items: center; 
-      justify-content: center;
-    }
-  </style>
+  <link rel="stylesheet" href="/style.css">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
-  <div id="app">LOADING COUNTDOWN...</div>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="/app.js"></script>
+  <div id="app">
+    <div class="center" style="color: white; font-size: 18px;">
+      LOADING COUNTDOWN...
+    </div>
+  </div>
   
   <script>
-    // Фолбэк если основной скрипт не грузится
+    // Fallback если app.js не загружается
     setTimeout(function() {
-      if (document.getElementById('app').innerHTML === 'LOADING COUNTDOWN...') {
-        document.getElementById('app').innerHTML = `
-          <div style="text-align: center;">
-            <div>SCRIPT LOAD ERROR</div>
-            <div style="margin-top: 20px; color: red;">Check browser console</div>
-            <div style="margin-top: 10px; cursor: pointer;" onclick="location.reload()">RELOAD</div>
+      const app = document.getElementById('app');
+      if (app.innerHTML.includes('LOADING COUNTDOWN')) {
+        app.innerHTML = `
+          <div class="center">
+            <div style="color: #ff0000; font-size: 24px; margin-bottom: 20px;">
+              ⚠️ APP LOAD ERROR
+            </div>
+            <div style="font-size: 16px; margin-bottom: 20px;">
+              Please check your connection and try again
+            </div>
+            <div class="choice" onclick="location.reload()" style="cursor: pointer;">
+              🔄 RETRY LOADING
+            </div>
           </div>
         `;
       }
-    }, 3000);
+    }, 8000);
   </script>
+  
+  <script src="/app.js"></script>
 </body>
 </html>
