@@ -5,13 +5,32 @@ document.addEventListener('DOMContentLoaded', function() {
     tg.enableClosingConfirmation();
   }
   
-  // Добавляем сканирующие линии
+  // Предзагрузка медиа
+  preloadMedia();
+  
   const scanLines = document.createElement('div');
   scanLines.className = 'scan-lines';
   document.body.appendChild(scanLines);
   
   startApp(tg);
 });
+
+// Предзагрузка медиафайлов
+function preloadMedia() {
+  const sounds = ['/sounds/whisper.mp3', '/sounds/scratch.mp3', '/sounds/thump.mp3', '/sounds/static.mp3'];
+  const images = ['/images/face1.jpg', '/images/face2.jpg', '/images/symbol1.jpg', '/images/glitch.jpg'];
+  
+  sounds.forEach(sound => {
+    const audio = new Audio();
+    audio.src = sound;
+    audio.load();
+  });
+  
+  images.forEach(image => {
+    const img = new Image();
+    img.src = image;
+  });
+}
 
 function startApp(tg = null) {
   const app = document.getElementById('app');
@@ -20,26 +39,184 @@ function startApp(tg = null) {
   let timerInterval = null;
   let lastPhraseTime = 0;
   let lastHorrorEffect = 0;
+  let lastAppOpen = Date.now();
+  let lastInteraction = Date.now();
+  let shareAvailable = false;
 
-  // ===================== ХОРРОР-ЭФФЕКТЫ =====================
+  // Обновляем время взаимодействия при любом действии
+  document.addEventListener('click', () => lastInteraction = Date.now());
+  document.addEventListener('touchstart', () => lastInteraction = Date.now());
+  document.addEventListener('mousemove', () => lastInteraction = Date.now());
+
+  // ===================== НОВЫЕ ФУНКЦИИ =====================
+
+  // ВИРАЛЬНАЯ МЕХАНИКА - ПОДЕЛИТЬСЯ РЕЗУЛЬТАТОМ
+  function initShareButton() {
+    if (deathDate && !document.querySelector('.share-btn')) {
+      const shareBtn = document.createElement('div');
+      shareBtn.className = 'share-btn';
+      shareBtn.innerHTML = '📱 SHARE RESULT';
+      shareBtn.addEventListener('click', shareResult);
+      document.body.appendChild(shareBtn);
+      
+      setTimeout(() => {
+        shareBtn.style.opacity = '1';
+        shareBtn.style.transform = 'translateY(0)';
+      }, 100);
+    }
+  }
+
+  function shareResult() {
+    if (!deathDate) return;
+    
+    const timeLeft = Math.floor((deathDate - new Date()) / (1000 * 60 * 60 * 24));
+    const message = language === 'RU' 
+      ? `🕳 Мой отсчёт: ${timeLeft} дней. Узнай свой!`
+      : `🕳 My countdown: ${timeLeft} days. Discover yours!`;
+    
+    // Пытаемся использовать нативный шеринг
+    if (navigator.share) {
+      navigator.share({
+        title: 'COUNTDOWN',
+        text: message,
+        url: window.location.href
+      }).catch(() => fallbackShare(message));
+    } else {
+      fallbackShare(message);
+    }
+  }
+
+  function fallbackShare(message) {
+    // Копируем в буфер обмена
+    navigator.clipboard.writeText(message + ' ' + window.location.href).then(() => {
+      const alertMsg = language === 'RU' ? 'Ссылка скопирована!' : 'Link copied!';
+      showTemporaryMessage(alertMsg);
+    }).catch(() => {
+      showTemporaryMessage('Share manually: ' + message);
+    });
+  }
+
+  function showTemporaryMessage(text) {
+    const msg = document.createElement('div');
+    msg.className = 'trigger-message';
+    msg.textContent = text;
+    document.body.appendChild(msg);
+    
+    setTimeout(() => {
+      if (msg.parentNode) msg.remove();
+    }, 3000);
+  }
+
+  // СЛУЧАЙНЫЕ ЗВУКИ
+  function playRandomSound() {
+    const sounds = ['whisper', 'scratch', 'thump', 'static'];
+    const sound = sounds[Math.floor(Math.random() * sounds.length)];
+    
+    try {
+      const audio = new Audio(`/sounds/${sound}.mp3`);
+      audio.volume = 0.3;
+      audio.play().catch(e => console.log('Audio play failed:', e));
+    } catch (e) {
+      console.log('Audio error:', e);
+    }
+  }
+
+  // ВСПЫШКИ ИЗОБРАЖЕНИЙ
+  function showImageFlash() {
+    const images = ['face1', 'face2', 'symbol1', 'glitch'];
+    const image = images[Math.floor(Math.random() * images.length)];
+    
+    const flash = document.createElement('div');
+    flash.className = 'image-flash';
+    flash.style.backgroundImage = `url(/images/${image}.jpg)`;
+    document.body.appendChild(flash);
+    
+    setTimeout(() => {
+      flash.style.opacity = '1';
+    }, 50);
+    
+    setTimeout(() => {
+      flash.style.opacity = '0';
+      setTimeout(() => {
+        if (flash.parentNode) flash.remove();
+      }, 1000);
+    }, 800 + Math.random() * 400);
+  }
+
+  // ТРИГГЕРНЫЕ СООБЩЕНИЯ (по поведению)
+  function checkForTriggers() {
+    const now = Date.now();
+    
+    // Триггер по времени суток (ночь)
+    const hour = new Date().getHours();
+    if (hour >= 22 || hour <= 6) {
+      if (Math.random() < 0.1) {
+        showTriggerMessage('NIGHT_TRIGGER');
+      }
+    }
+    
+    // Триггер по быстрому закрытию/открытию
+    if (now - lastAppOpen < 10000) {
+      if (Math.random() < 0.3) {
+        showTriggerMessage('QUICK_RETURN');
+      }
+    }
+    lastAppOpen = now;
+    
+    // Триггер по долгому бездействию
+    if (now - lastInteraction > 300000) {
+      if (Math.random() < 0.2) {
+        showTriggerMessage('INACTIVITY');
+      }
+    }
+  }
+
+  function showTriggerMessage(type) {
+    const messages = {
+      'NIGHT_TRIGGER': {
+        EN: ['IT LIKES THE DARK', 'NIGHT BELONGS TO IT', 'DARKNESS IS ITS HOME'],
+        RU: ['ОНО ЛЮБИТ ТЕМНОТУ', 'НОЧЬ ПРИНАДЛЕЖИТ ЕМУ', 'ТЬМА - ЕГО ДОМ']
+      },
+      'QUICK_RETURN': {
+        EN: ['YOU CAME BACK', 'IT MISSED YOU', 'RUNNING CHANGES NOTHING'],
+        RU: ['ТЫ ВЕРНУЛСЯ', 'ОНО СКУЧАЛО', 'БЕГСТВО НИЧЕГО НЕ МЕНЯЕТ']
+      },
+      'INACTIVITY': {
+        EN: ['I NOTICED YOUR SILENCE', 'STILL THERE?', 'IT WATCHES YOU SLEEP'],
+        RU: ['Я ЗАМЕТИЛ ТВОЕ МОЛЧАНИЕ', 'ЕЩЕ ЗДЕСЬ?', 'ОНО СЛЕДИТ ЗА ТВОИМ СНОМ']
+      }
+    };
+    
+    const messageSet = messages[type] || messages['NIGHT_TRIGGER'];
+    const message = language === 'RU' ? messageSet.RU : messageSet.EN;
+    const text = message[Math.floor(Math.random() * message.length)];
+    
+    const triggerMsg = document.createElement('div');
+    triggerMsg.className = 'trigger-message';
+    triggerMsg.textContent = text;
+    document.body.appendChild(triggerMsg);
+    
+    setTimeout(() => {
+      if (triggerMsg.parentNode) triggerMsg.remove();
+    }, 4000);
+  }
+
+  // ХОРРОР-ЭФФЕКТЫ
   function triggerHorrorEffect() {
     const now = Date.now();
-    if (now - lastHorrorEffect < 30000) return; // Не чаще чем раз в 30 секунд
+    if (now - lastHorrorEffect < 30000) return;
     
     lastHorrorEffect = now;
     
-    // Случайный эффект
     const effect = Math.random();
     
     if (effect < 0.3) {
-      // Временное покраснение цифр
       document.querySelectorAll('.timer-unit').forEach(unit => {
         unit.classList.add('temporary-red');
         setTimeout(() => unit.classList.remove('temporary-red'), 2000);
       });
     } 
     else if (effect < 0.5) {
-      // Шёпот
       const whispers = language === 'RU' 
         ? ['не смотри', 'оно близко', 'ты уже мёртв', 'беги', 'поздно']
         : ['dont look', 'it is close', 'you are dead', 'run', 'too late'];
@@ -54,7 +231,6 @@ function startApp(tg = null) {
       }, 6000);
     }
     else if (effect < 0.7) {
-      // Кровавые подтёки
       for (let i = 0; i < 3; i++) {
         setTimeout(() => {
           const drip = document.createElement('div');
@@ -69,30 +245,8 @@ function startApp(tg = null) {
       }
     }
     
-    // Случайный звук (если есть)
     if (Math.random() < 0.5) {
-      playHorrorSound();
-    }
-  }
-
-  function playHorrorSound() {
-    // Простой звуковой эффект через Web Audio API
-    try {
-      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-      
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      
-      oscillator.frequency.setValueAtTime(100 + Math.random() * 400, audioContext.currentTime);
-      gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 1);
-      
-      oscillator.start();
-      oscillator.stop(audioContext.currentTime + 1);
-    } catch (e) {
-      console.log('Audio not supported');
+      playRandomSound();
     }
   }
 
@@ -388,19 +542,19 @@ BY CONTINUING, YOU ACKNOWLEDGE THAT THE COUNTDOWN DID NOT BEGIN - IT WAS MERELY 
     const random = Math.random();
     let ms;
     
-    if (random < 0.6) { // 60% - 20-35 дней
+    if (random < 0.6) {
       const days = 20 + Math.floor(Math.random() * 15);
       ms = days * 24 * 60 * 60 * 1000;
     } 
-    else if (random < 0.7) { // 10% - 1-10 дней
+    else if (random < 0.7) {
       const days = 1 + Math.floor(Math.random() * 9);
       ms = days * 24 * 60 * 60 * 1000;
     }
-    else if (random < 0.9) { // 20% - 50-100 лет
+    else if (random < 0.9) {
       const years = 50 + Math.floor(Math.random() * 50);
       ms = years * 365 * 24 * 60 * 60 * 1000;
     }
-    else { // 10% - 1 день
+    else {
       ms = 24 * 60 * 60 * 1000;
     }
     
@@ -409,7 +563,6 @@ BY CONTINUING, YOU ACKNOWLEDGE THAT THE COUNTDOWN DID NOT BEGIN - IT WAS MERELY 
 
   // ===================== АНИМАЦИЯ ТАЙМЕРА =====================
   function startTimer() {
-    // Анимация появления цифр
     showGrowingNumbers();
     setTimeout(() => {
       updateTimerDisplay();
@@ -449,7 +602,6 @@ BY CONTINUING, YOU ACKNOWLEDGE THAT THE COUNTDOWN DID NOT BEGIN - IT WAS MERELY 
     const minutes = Math.floor((diff % 3600000) / 60000);
     const seconds = Math.floor((diff % 60000) / 1000);
 
-    // Логика красных цифр (последовательно)
     const yrsRed = years === 0;
     const dayRed = yrsRed && days === 0;
     const hrsRed = yrsRed && dayRed && hours === 0;
@@ -475,7 +627,6 @@ BY CONTINUING, YOU ACKNOWLEDGE THAT THE COUNTDOWN DID NOT BEGIN - IT WAS MERELY 
       </div>
     `;
 
-    // Эффекты
     const isRedZone = diff <= 7 * 86400000;
     const isCritical = diff <= 86400000;
     
@@ -487,26 +638,42 @@ BY CONTINUING, YOU ACKNOWLEDGE THAT THE COUNTDOWN DID NOT BEGIN - IT WAS MERELY 
 
     showScreen(`<div class="${effects.trim()}">${timerHtml}</div>`);
 
-    // Случайные хоррор-эффекты
+    // НОВЫЕ ЭФФЕКТЫ
+    if (Math.random() < 0.03) {
+      playRandomSound();
+    }
+    
+    if (Math.random() < 0.02) {
+      showImageFlash();
+    }
+    
+    if (Math.random() < 0.05) {
+      checkForTriggers();
+    }
+
     if (Math.random() < 0.05) {
       triggerHorrorEffect();
     }
 
-    // Случайные фразы (редко)
     const nowTime = Date.now();
-    if (nowTime - lastPhraseTime > 300000 && Math.random() < 0.1) { // Не чаще раз в 5 минут
+    if (nowTime - lastPhraseTime > 300000 && Math.random() < 0.1) {
       showRandomPhrase();
       lastPhraseTime = nowTime;
     }
 
-    // Вибрация в последние сутки
     if (isCritical && navigator.vibrate && Math.random() < 0.1) {
       navigator.vibrate([200, 100, 200]);
     }
 
-    // Ложное завершение
     if (diff > 300000 && Math.random() < 0.001) {
       triggerFalseEnd();
+    }
+
+    if (!shareAvailable && diff > 0) {
+      setTimeout(() => {
+        shareAvailable = true;
+        initShareButton();
+      }, 10000);
     }
   }
 
@@ -556,7 +723,6 @@ BY CONTINUING, YOU ACKNOWLEDGE THAT THE COUNTDOWN DID NOT BEGIN - IT WAS MERELY 
       navigator.vibrate([1000, 300, 1000, 300, 1000]);
     }
     
-    // Финальный хоррор-эффект
     setTimeout(triggerHorrorEffect, 1000);
   }
 
