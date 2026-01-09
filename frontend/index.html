@@ -9,33 +9,11 @@
 </head>
 <body>
   <div id="app">
-    <div class="center" style="color: white; font-size: 18px;">
+    <!-- Изначально черный экран, но с загрузкой -->
+    <div class="center" style="color: white; font-size: 16px;">
       LOADING COUNTDOWN...
     </div>
   </div>
-  
-  <script>
-    // Fallback если app.js не загружается
-    setTimeout(function() {
-      const app = document.getElementById('app');
-      if (app.innerHTML.includes('LOADING COUNTDOWN')) {
-        app.innerHTML = `
-          <div class="center">
-            <div style="color: #ff0000; font-size: 24px; margin-bottom: 20px;">
-              ⚠️ APP LOAD ERROR
-            </div>
-            <div style="font-size: 16px; margin-bottom: 20px;">
-              Please check your connection and try again
-            </div>
-            <div class="choice" onclick="location.reload()" style="cursor: pointer;">
-              🔄 RETRY LOADING
-            </div>
-          </div>
-        `;
-      }
-    }, 8000);
-  </script>
-  
   <script src="/app.js"></script>
 </body>
 </html>
