@@ -8,6 +8,6 @@ RUN npm install
 COPY backend ./backend
 COPY frontend ./frontend
 
-EXPOSE 8000
+EXPOSE 3000
 
 CMD ["node", "backend/index.js"]
