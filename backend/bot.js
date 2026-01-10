@@ -45,7 +45,7 @@ bot.onText(/\/stats/, async (msg) => {
     const now = new Date();
     const recentUsers = await pool.query(
       'SELECT COUNT(*) FROM users WHERE created_at > $1',
-      [new Date(now.getTime() - 24 * 60 * 60 * 1000)] // Последние 24 часа
+      [new Date(now.getTime() - 24 * 60 * 60 * 1000)]
     );
     
     await bot.sendMessage(
@@ -86,7 +86,6 @@ bot.onText(/\/broadcast (.+)/, async (msg, match) => {
           parse_mode: 'Markdown'
         });
         success++;
-        // Задержка чтобы не спамить
         await new Promise(resolve => setTimeout(resolve, 100));
       } catch (error) {
         failed++;
@@ -144,11 +143,28 @@ bot.onText(/\/start/, async (msg) => {
   const telegramId = msg.from.id;
 
   try {
+    // 🔽 ДОБАВЛЕНО: сохранение username / имени (БЕЗ удаления старой логики)
     await pool.query(
-      `INSERT INTO users (telegram_id, language, death_timestamp)
-       VALUES ($1, $2, NOW() + INTERVAL '1 year')
-       ON CONFLICT (telegram_id) DO NOTHING`,
-      [telegramId, 'EN']
+      `INSERT INTO users (
+        telegram_id,
+        language,
+        death_timestamp,
+        username,
+        first_name,
+        last_name
+      )
+       VALUES ($1, $2, NOW() + INTERVAL '1 year', $3, $4, $5)
+       ON CONFLICT (telegram_id) DO UPDATE SET
+         username = EXCLUDED.username,
+         first_name = EXCLUDED.first_name,
+         last_name = EXCLUDED.last_name`,
+      [
+        telegramId,
+        'EN',
+        msg.from.username || null,
+        msg.from.first_name || null,
+        msg.from.last_name || null
+      ]
     );
 
     await bot.sendMessage(
@@ -183,7 +199,6 @@ bot.onText(/\/start/, async (msg) => {
     );
   } catch (err) {
     console.error('BOT START ERROR:', err);
-    // Пытаемся отправить сообщение об ошибке
     try {
       await bot.sendMessage(
         telegramId,
@@ -192,6 +207,34 @@ bot.onText(/\/start/, async (msg) => {
       );
     } catch (sendError) {
       console.error('Failed to send error message:', sendError);
+    }
+  }
+});
+
+// ===================== ГРУППЫ (ДОБАВЛЕНО, НЕ ВЛИЯЕТ НА ЛС) =====================
+bot.on('my_chat_member', async (msg) => {
+  const chat = msg.chat;
+  const status = msg.new_chat_member.status;
+
+  if (
+    (chat.type === 'group' || chat.type === 'supergroup') &&
+    status === 'administrator'
+  ) {
+    try {
+      await pool.query(
+        `INSERT INTO group_chats (chat_id, title)
+         VALUES ($1, $2)
+         ON CONFLICT (chat_id) DO NOTHING`,
+        [chat.id, chat.title || 'unknown']
+      );
+
+      await bot.sendMessage(
+        chat.id,
+        '🩸 *THIS PLACE IS MARKED*\n\nI will speak here.',
+        { parse_mode: 'Markdown' }
+      );
+    } catch (e) {
+      console.error('Group insert error:', e);
     }
   }
 });
@@ -206,7 +249,6 @@ bot.on('webhook_error', (error) => {
 });
 
 // ===================== СООБЩЕНИЯ ОТ "ОНО" ПОСЛЕ КОНЦА ТАЙМЕРА =====================
-// Эта функция будет вызываться из post_end_watcher.js
 export async function sendPostEndMessage(telegramId, message) {
   try {
     await bot.sendMessage(
@@ -220,7 +262,6 @@ export async function sendPostEndMessage(telegramId, message) {
 }
 
 // ===================== ПРЕДУПРЕЖДЕНИЯ ЗА 7 ДНЕЙ И 24 ЧАСА =====================
-// Эта функция будет вызываться из watcher.js
 export async function sendWarningMessage(telegramId, message) {
   try {
     await bot.sendMessage(
@@ -232,35 +273,7 @@ export async function sendWarningMessage(telegramId, message) {
     console.error('Failed to send warning message:', error);
   }
 }
-// ===================== ГРУППЫ =====================
 
-// Когда бота добавляют в группу
-bot.on('my_chat_member', async (msg) => {
-  const chat = msg.chat;
-  const status = msg.new_chat_member.status;
-
-  if (chat.type === 'group' || chat.type === 'supergroup') {
-    if (status === 'administrator') {
-      try {
-        await pool.query(
-          `INSERT INTO group_chats (chat_id, title)
-           VALUES ($1, $2)
-           ON CONFLICT (chat_id) DO NOTHING`,
-          [chat.id, chat.title || 'unknown']
-        );
-
-        await bot.sendMessage(
-          chat.id,
-          '🩸 *I SEE YOU ALL*\n\nThis place has been marked.',
-          { parse_mode: 'Markdown' }
-        );
-      } catch (e) {
-        console.error('Group insert error:', e);
-      }
-    }
-  }
-});
 console.log('🤖 COUNTDOWN BOT STARTED SUCCESSFULLY');
 console.log(`🔐 ADMIN ID: ${ADMIN_ID}`);
 console.log(`🔐 ADMIN USERNAME: ${ADMIN_USERNAME}`);
-
