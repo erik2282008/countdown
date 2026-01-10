@@ -10,14 +10,10 @@ CREATE TABLE IF NOT EXISTS users (
   ended              BOOLEAN DEFAULT FALSE,
   last_post_message  TIMESTAMPTZ,
 
-  extensions         INT DEFAULT 0
-CREATE TABLE IF NOT EXISTS group_chats (
-  chat_id BIGINT PRIMARY KEY,
-  title TEXT,
-  added_at TIMESTAMPTZ DEFAULT NOW()
-  ALTER TABLE users
-ADD COLUMN IF NOT EXISTS username TEXT,
-ADD COLUMN IF NOT EXISTS first_name TEXT,
-ADD COLUMN IF NOT EXISTS last_name TEXT;
-);
+  extensions         INT DEFAULT 0,
 
+  -- 🔽 ДОБАВЛЕНО
+  username           TEXT,
+  first_name         TEXT,
+  last_name          TEXT
+);
