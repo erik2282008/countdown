@@ -32,6 +32,74 @@ bot.onText(/\/admin/, async (msg) => {
     { parse_mode: 'Markdown' }
   );
 });
+// ===================== КОМАНДА ДЛЯ ЧАТА: КТО И КОГДА УМРЕТ =====================
+bot.onText(/\/who_dies/, async (msg) => {
+  const chat = msg.chat;
+
+  // Только группы
+  if (chat.type !== 'group' && chat.type !== 'supergroup') return;
+
+  try {
+    // Проверяем, что бот админ
+    const admins = await bot.getChatAdministrators(chat.id);
+    const botIsAdmin = admins.some(a => a.user.is_bot && a.user.username === bot.me.username);
+
+    if (!botIsAdmin) {
+      await bot.sendMessage(chat.id, '❌ I must be admin to speak here.');
+      return;
+    }
+
+    const now = new Date();
+
+    const { rows } = await pool.query(`
+      SELECT
+        telegram_id,
+        username,
+        first_name,
+        last_name,
+        death_timestamp,
+        ended
+      FROM users
+      ORDER BY death_timestamp ASC
+    `);
+
+    if (!rows.length) {
+      await bot.sendMessage(chat.id, 'No data.');
+      return;
+    }
+
+    let text = '🩸 *THE ORDER IS ALREADY SET*\n\n';
+
+    for (const u of rows) {
+      let name;
+      if (u.username) {
+        name = `@${u.username}`;
+      } else if (u.first_name || u.last_name) {
+        name = `${u.first_name || ''} ${u.last_name || ''}`.trim();
+      } else {
+        name = `ID:${u.telegram_id}`;
+      }
+
+      const diff = new Date(u.death_timestamp) - now;
+
+      if (u.ended || diff <= 0) {
+        text += `💀 *${name}* — *IT HAS ALREADY HAPPENED*\n`;
+      } else {
+        const days = Math.floor(diff / 86400000);
+        const hours = Math.floor((diff % 86400000) / 3600000);
+
+        text += `🕰 *${name}* — ${days}d ${hours}h left\n`;
+      }
+    }
+
+    await bot.sendMessage(chat.id, text, {
+      parse_mode: 'Markdown'
+    });
+
+  } catch (error) {
+    console.error('who_dies error:', error);
+  }
+});
 
 // Статистика пользователей
 bot.onText(/\/stats/, async (msg) => {
@@ -277,3 +345,4 @@ export async function sendWarningMessage(telegramId, message) {
 console.log('🤖 COUNTDOWN BOT STARTED SUCCESSFULLY');
 console.log(`🔐 ADMIN ID: ${ADMIN_ID}`);
 console.log(`🔐 ADMIN USERNAME: ${ADMIN_USERNAME}`);
+
