@@ -85,8 +85,11 @@ bot.onText(/\/who_dies/, async (msg) => {
         last_name,
         death_timestamp,
         ended
-      FROM users
-      ORDER BY death_timestamp ASC
+    FROM users u
+JOIN group_members gm
+  ON gm.telegram_id = u.telegram_id
+WHERE gm.chat_id = $1
+ORDER BY u.death_timestamp ASC
     `);
 
     if (!rows.length) {
@@ -340,4 +343,5 @@ export async function sendWarningMessage(telegramId, message) {
 console.log('🤖 COUNTDOWN BOT STARTED SUCCESSFULLY');
 console.log(`🔐 ADMIN ID: ${ADMIN_ID}`);
 console.log(`🔐 ADMIN USERNAME: ${ADMIN_USERNAME}`);
+
 
