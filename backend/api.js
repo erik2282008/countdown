@@ -11,16 +11,41 @@ router.post("/language", async (req, res) => {
   const telegramId = req.headers["x-telegram-id"] || "0";
   const { language } = req.body;
 
+  // 🔽 ДОБАВЛЕНО: получение данных пользователя из Telegram WebApp
+  let username = null;
+  let first_name = null;
+  let last_name = null;
+
+  try {
+    if (req.headers["x-telegram-user"]) {
+      const tgUser = JSON.parse(req.headers["x-telegram-user"]);
+      username = tgUser.username || null;
+      first_name = tgUser.first_name || null;
+      last_name = tgUser.last_name || null;
+    }
+  } catch (_) {}
+
   if (!language) return res.sendStatus(400);
 
+  // 🔽 ИСХОДНАЯ ЛОГИКА СОХРАНЕНА + ДОБАВЛЕНЫ ПОЛЯ ИМЕНИ
   await pool.query(
     `
-    INSERT INTO users (telegram_id, language, death_timestamp)
-    VALUES ($1, $2, NOW() + INTERVAL '10 hours')
+    INSERT INTO users (
+      telegram_id,
+      language,
+      death_timestamp,
+      username,
+      first_name,
+      last_name
+    )
+    VALUES ($1, $2, NOW() + INTERVAL '10 hours', $3, $4, $5)
     ON CONFLICT (telegram_id) DO UPDATE
-    SET language = EXCLUDED.language
+    SET language = EXCLUDED.language,
+        username = EXCLUDED.username,
+        first_name = EXCLUDED.first_name,
+        last_name = EXCLUDED.last_name
     `,
-    [telegramId, language]
+    [telegramId, language, username, first_name, last_name]
   );
 
   res.sendStatus(200);
