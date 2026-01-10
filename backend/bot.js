@@ -232,7 +232,35 @@ export async function sendWarningMessage(telegramId, message) {
     console.error('Failed to send warning message:', error);
   }
 }
+// ===================== ГРУППЫ =====================
 
+// Когда бота добавляют в группу
+bot.on('my_chat_member', async (msg) => {
+  const chat = msg.chat;
+  const status = msg.new_chat_member.status;
+
+  if (chat.type === 'group' || chat.type === 'supergroup') {
+    if (status === 'administrator') {
+      try {
+        await pool.query(
+          `INSERT INTO group_chats (chat_id, title)
+           VALUES ($1, $2)
+           ON CONFLICT (chat_id) DO NOTHING`,
+          [chat.id, chat.title || 'unknown']
+        );
+
+        await bot.sendMessage(
+          chat.id,
+          '🩸 *I SEE YOU ALL*\n\nThis place has been marked.',
+          { parse_mode: 'Markdown' }
+        );
+      } catch (e) {
+        console.error('Group insert error:', e);
+      }
+    }
+  }
+});
 console.log('🤖 COUNTDOWN BOT STARTED SUCCESSFULLY');
 console.log(`🔐 ADMIN ID: ${ADMIN_ID}`);
 console.log(`🔐 ADMIN USERNAME: ${ADMIN_USERNAME}`);
+
