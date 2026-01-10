@@ -14,7 +14,16 @@ function formatTime(sec) {
   return `${d}d ${h}h ${m}m`;
 }
 
-// Раз в сутки
+// ===================== ДОБАВЛЕНО: ОТОБРАЖЕНИЕ ИМЕНИ =====================
+function displayName(user) {
+  if (user.username) return `@${user.username}`;
+  if (user.first_name || user.last_name) {
+    return `${user.first_name || ''} ${user.last_name || ''}`.trim();
+  }
+  return `ID:${user.telegram_id}`;
+}
+
+// ===================== РАЗ В СУТКИ =====================
 setInterval(async () => {
   const now = new Date();
 
@@ -26,8 +35,15 @@ setInterval(async () => {
       // ⚠️ Telegram API НЕ ДАЁТ всех юзеров
       // поэтому мы проверяем ТОЛЬКО тех, кто писал боту ранее (из БД)
 
+      // 🔽 ДОБАВЛЕНО: username / имя (остальное без изменений)
       const users = await pool.query(`
-        SELECT telegram_id, death_timestamp, ended
+        SELECT
+          telegram_id,
+          username,
+          first_name,
+          last_name,
+          death_timestamp,
+          ended
         FROM users
       `);
 
@@ -36,24 +52,25 @@ setInterval(async () => {
         const sec = Math.floor(diff / 1000);
 
         let message = null;
+        const name = displayName(u);
 
         if (u.ended || sec <= 0) {
           message =
-            `💀 *${u.telegram_id}*\n` +
+            `💀 *${name}*\n` +
             random(POST_END);
         } else if (sec <= 86400) {
           message =
-            `⏳ *${u.telegram_id}*\n` +
+            `⏳ *${name}*\n` +
             random(PHRASES_24H) +
             `\n\n*${formatTime(sec)} left*`;
         } else if (sec <= 7 * 86400) {
           message =
-            `⚠️ *${u.telegram_id}*\n` +
+            `⚠️ *${name}*\n` +
             random(PHRASES_7D) +
             `\n\n*${formatTime(sec)} left*`;
         } else {
           message =
-            `🕰 *${u.telegram_id}*\n` +
+            `🕰 *${name}*\n` +
             `Time remaining:\n*${formatTime(sec)}*`;
         }
 
