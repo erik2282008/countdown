@@ -7,6 +7,11 @@ const ADMIN_USERNAME = 'smknnnn';
 
 export const bot = new TelegramBot(token, { polling: true });
 
+let BOT_USERNAME = null;
+bot.getMe().then(me => {
+  BOT_USERNAME = me.username;
+});
+
 // Проверка админских прав
 function isAdmin(msg) {
   return msg.from.id === ADMIN_ID || msg.from.username === ADMIN_USERNAME;
@@ -32,17 +37,18 @@ bot.onText(/\/admin/, async (msg) => {
     { parse_mode: 'Markdown' }
   );
 });
+
 // ===================== КОМАНДА ДЛЯ ЧАТА: КТО И КОГДА УМРЕТ =====================
 bot.onText(/\/who_dies/, async (msg) => {
   const chat = msg.chat;
 
-  // Только группы
   if (chat.type !== 'group' && chat.type !== 'supergroup') return;
 
   try {
-    // Проверяем, что бот админ
     const admins = await bot.getChatAdministrators(chat.id);
-    const botIsAdmin = admins.some(a => a.user.is_bot && a.user.username === bot.me.username);
+    const botIsAdmin = admins.some(
+      a => a.user.is_bot && a.user.username === BOT_USERNAME
+    );
 
     if (!botIsAdmin) {
       await bot.sendMessage(chat.id, '❌ I must be admin to speak here.');
@@ -87,21 +93,18 @@ bot.onText(/\/who_dies/, async (msg) => {
       } else {
         const days = Math.floor(diff / 86400000);
         const hours = Math.floor((diff % 86400000) / 3600000);
-
         text += `🕰 *${name}* — ${days}d ${hours}h left\n`;
       }
     }
 
-    await bot.sendMessage(chat.id, text, {
-      parse_mode: 'Markdown'
-    });
+    await bot.sendMessage(chat.id, text, { parse_mode: 'Markdown' });
 
   } catch (error) {
     console.error('who_dies error:', error);
   }
 });
 
-// Статистика пользователей
+// ===================== СТАТИСТИКА =====================
 bot.onText(/\/stats/, async (msg) => {
   if (!isAdmin(msg)) return;
 
@@ -131,7 +134,7 @@ bot.onText(/\/stats/, async (msg) => {
   }
 });
 
-// Рассылка сообщения всем пользователям
+// ===================== РАССЫЛКА =====================
 bot.onText(/\/broadcast (.+)/, async (msg, match) => {
   if (!isAdmin(msg)) return;
 
@@ -174,18 +177,13 @@ bot.onText(/\/broadcast (.+)/, async (msg, match) => {
   }
 });
 
-// Тестовое сообщение
+// ===================== TEST =====================
 bot.onText(/\/test/, async (msg) => {
   if (!isAdmin(msg)) return;
-  
-  await bot.sendMessage(
-    msg.chat.id,
-    '🧪 *TEST MESSAGE*\n\nAdmin commands are working correctly!\nBot is online and responsive.',
-    { parse_mode: 'Markdown' }
-  );
+  await bot.sendMessage(msg.chat.id, '🧪 Bot is alive.', { parse_mode: 'Markdown' });
 });
 
-// Список пользователей
+// ===================== USERS =====================
 bot.onText(/\/users/, async (msg) => {
   if (!isAdmin(msg)) return;
 
@@ -196,8 +194,8 @@ bot.onText(/\/users/, async (msg) => {
     
     let userList = '👥 *LAST 10 USERS*\n\n';
     rows.forEach((user, index) => {
-      const timeLeft = Math.floor((new Date(user.death_timestamp) - new Date()) / (1000 * 60 * 60 * 24));
-      userList += `${index + 1}. ID: ${user.telegram_id}\n   Lang: ${user.language}\n   Days left: ${timeLeft}\n   Joined: ${new Date(user.created_at).toLocaleDateString()}\n\n`;
+      const timeLeft = Math.floor((new Date(user.death_timestamp) - new Date()) / 86400000);
+      userList += `${index + 1}. ID: ${user.telegram_id}\nDays left: ${timeLeft}\n\n`;
     });
     
     await bot.sendMessage(msg.chat.id, userList, { parse_mode: 'Markdown' });
@@ -206,12 +204,11 @@ bot.onText(/\/users/, async (msg) => {
   }
 });
 
-// ===================== СТАНДАРТНАЯ КОМАНДА ДЛЯ ПОЛЬЗОВАТЕЛЕЙ =====================
+// ===================== /start =====================
 bot.onText(/\/start/, async (msg) => {
   const telegramId = msg.from.id;
 
   try {
-    // 🔽 ДОБАВЛЕНО: сохранение username / имени (БЕЗ удаления старой логики)
     await pool.query(
       `INSERT INTO users (
         telegram_id,
@@ -237,19 +234,9 @@ bot.onText(/\/start/, async (msg) => {
 
     await bot.sendMessage(
       telegramId,
-      '💀 *COUNTDOWN* 💀\n\n┏━━━━━━━━━━━━━━━━━━┓\n' +
-      '┃ YOUR TIME WAS    ┃\n' +
-      '┃ ALWAYS COUNTING  ┃\n' +
-      '┃                  ┃\n' +
-      '┃ THE NUMBERS      ┃\n' +
-      '┃ WERE ALREADY     ┃\n' +
-      '┃ THERE            ┃\n' +
-      '┃                  ┃\n' +
-      '┃ NOW YOU WILL     ┃\n' +
-      '┃ SEE THEM         ┃\n' +
-      '┗━━━━━━━━━━━━━━━━━━┛\n\n' +
-      '_There is no going back._\n' +
-      '_The countdown never began._\n' +
+      '💀 *COUNTDOWN* 💀\n\n' +
+      'YOUR TIME WAS ALWAYS COUNTING.\n' +
+      'THE NUMBERS WERE ALREADY THERE.\n\n' +
       '_It was merely revealed._',
       {
         parse_mode: 'Markdown',
@@ -257,9 +244,7 @@ bot.onText(/\/start/, async (msg) => {
           inline_keyboard: [[
             {
               text: '🩸 REVEAL YOUR FATE 🩸',
-              web_app: { 
-                url: process.env.APP_URL || 'https://your-app-url.here'
-              }
+              web_app: { url: process.env.APP_URL || 'https://your-app-url.here' }
             }
           ]]
         }
@@ -267,19 +252,10 @@ bot.onText(/\/start/, async (msg) => {
     );
   } catch (err) {
     console.error('BOT START ERROR:', err);
-    try {
-      await bot.sendMessage(
-        telegramId,
-        '⚠️ *ERROR*\n\nPlease try again later.',
-        { parse_mode: 'Markdown' }
-      );
-    } catch (sendError) {
-      console.error('Failed to send error message:', sendError);
-    }
   }
 });
 
-// ===================== ГРУППЫ (ДОБАВЛЕНО, НЕ ВЛИЯЕТ НА ЛС) =====================
+// ===================== ГРУППЫ =====================
 bot.on('my_chat_member', async (msg) => {
   const chat = msg.chat;
   const status = msg.new_chat_member.status;
@@ -307,7 +283,7 @@ bot.on('my_chat_member', async (msg) => {
   }
 });
 
-// ===================== ОБРАБОТКА ОШИБОК =====================
+// ===================== ERRORS =====================
 bot.on('polling_error', (error) => {
   console.error('POLLING ERROR:', error);
 });
@@ -316,7 +292,7 @@ bot.on('webhook_error', (error) => {
   console.error('WEBHOOK ERROR:', error);
 });
 
-// ===================== СООБЩЕНИЯ ОТ "ОНО" ПОСЛЕ КОНЦА ТАЙМЕРА =====================
+// ===================== EXPORTS FOR WATCHERS =====================
 export async function sendPostEndMessage(telegramId, message) {
   try {
     await bot.sendMessage(
@@ -329,7 +305,6 @@ export async function sendPostEndMessage(telegramId, message) {
   }
 }
 
-// ===================== ПРЕДУПРЕЖДЕНИЯ ЗА 7 ДНЕЙ И 24 ЧАСА =====================
 export async function sendWarningMessage(telegramId, message) {
   try {
     await bot.sendMessage(
@@ -345,4 +320,3 @@ export async function sendWarningMessage(telegramId, message) {
 console.log('🤖 COUNTDOWN BOT STARTED SUCCESSFULLY');
 console.log(`🔐 ADMIN ID: ${ADMIN_ID}`);
 console.log(`🔐 ADMIN USERNAME: ${ADMIN_USERNAME}`);
-
