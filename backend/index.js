@@ -2,6 +2,7 @@ import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
 import { initDB } from './db.js';
+import './group_watcher.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -81,3 +82,4 @@ app.listen(PORT, async () => {
   await initDB();
   console.log("🕳 COUNTDOWN SERVER RUNNING");
 });
+
