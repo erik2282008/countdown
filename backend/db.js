@@ -28,6 +28,15 @@ export async function initDB() {
     ADD COLUMN IF NOT EXISTS first_name TEXT,
     ADD COLUMN IF NOT EXISTS last_name TEXT;
   `);
+  await pool.query(`
+  CREATE TABLE IF NOT EXISTS group_members (
+    chat_id BIGINT,
+    telegram_id BIGINT,
+    joined_at TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (chat_id, telegram_id)
+  );
+`);
 
   console.log("DB READY");
 }
+
