@@ -4,6 +4,7 @@ import { pool } from './db.js';
 const token = process.env.BOT_TOKEN;
 const ADMIN_ID = 647773442;
 const ADMIN_USERNAME = 'smknnnn';
+const groupSeenUsers = new Map();
 
 export const bot = new TelegramBot(token, { polling: true });
 
@@ -35,6 +36,16 @@ bot.on('message', async (msg) => {
       console.error('group_members insert error:', e);
     }
   }
+});
+bot.on('message', (msg) => {
+  if (!msg.chat || !msg.from) return;
+  if (msg.chat.type !== 'group' && msg.chat.type !== 'supergroup') return;
+
+  if (!groupSeenUsers.has(msg.chat.id)) {
+    groupSeenUsers.set(msg.chat.id, new Set());
+  }
+
+  groupSeenUsers.get(msg.chat.id).add(msg.from.id);
 });
 
 // ===================== АДМИН КОМАНДЫ =====================
@@ -77,20 +88,23 @@ bot.onText(/\/who_dies/, async (msg) => {
 
     const now = new Date();
 
-    const { rows } = await pool.query(`
-      SELECT
-        telegram_id,
-        username,
-        first_name,
-        last_name,
-        death_timestamp,
-        ended
-    FROM users u
-JOIN group_members gm
-  ON gm.telegram_id = u.telegram_id
-WHERE gm.chat_id = $1
-ORDER BY u.death_timestamp ASC
-    `);
+const { rows } = await pool.query(
+  `
+  SELECT
+    u.telegram_id,
+    u.username,
+    u.first_name,
+    u.last_name,
+    u.death_timestamp,
+    u.ended
+  FROM users u
+  JOIN group_members gm
+    ON gm.telegram_id = u.telegram_id
+  WHERE gm.chat_id = $1
+  ORDER BY u.death_timestamp ASC
+  `,
+  [msg.chat.id]
+);
 
     if (!rows.length) {
       await bot.sendMessage(chat.id, 'No data.');
@@ -343,5 +357,6 @@ export async function sendWarningMessage(telegramId, message) {
 console.log('🤖 COUNTDOWN BOT STARTED SUCCESSFULLY');
 console.log(`🔐 ADMIN ID: ${ADMIN_ID}`);
 console.log(`🔐 ADMIN USERNAME: ${ADMIN_USERNAME}`);
+
 
 
