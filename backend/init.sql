@@ -11,4 +11,8 @@ CREATE TABLE IF NOT EXISTS users (
   last_post_message  TIMESTAMPTZ,
 
   extensions         INT DEFAULT 0
+CREATE TABLE IF NOT EXISTS group_chats (
+  chat_id BIGINT PRIMARY KEY,
+  title TEXT,
+  added_at TIMESTAMPTZ DEFAULT NOW()
 );
