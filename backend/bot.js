@@ -17,6 +17,26 @@ function isAdmin(msg) {
   return msg.from.id === ADMIN_ID || msg.from.username === ADMIN_USERNAME;
 }
 
+// ===================== ФИКСАЦИЯ УЧАСТНИКОВ ГРУПП =====================
+bot.on('message', async (msg) => {
+  if (!msg.chat || !msg.from) return;
+
+  if (msg.chat.type === 'group' || msg.chat.type === 'supergroup') {
+    try {
+      await pool.query(
+        `
+        INSERT INTO group_members (chat_id, telegram_id)
+        VALUES ($1, $2)
+        ON CONFLICT DO NOTHING
+        `,
+        [msg.chat.id, msg.from.id]
+      );
+    } catch (e) {
+      console.error('group_members insert error:', e);
+    }
+  }
+});
+
 // ===================== АДМИН КОМАНДЫ =====================
 
 // Команда для проверки админских прав
@@ -320,3 +340,4 @@ export async function sendWarningMessage(telegramId, message) {
 console.log('🤖 COUNTDOWN BOT STARTED SUCCESSFULLY');
 console.log(`🔐 ADMIN ID: ${ADMIN_ID}`);
 console.log(`🔐 ADMIN USERNAME: ${ADMIN_USERNAME}`);
+
