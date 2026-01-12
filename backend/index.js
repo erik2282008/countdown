@@ -2,6 +2,11 @@ import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
 import { initDB } from './db.js';
+
+// ИСПРАВЛЕННЫЕ ИМПОРТЫ - убрать dynamic imports
+import { bot } from './bot.js';
+import './watcher.js';
+import './post_end_watcher.js';
 import './group_watcher.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -10,10 +15,6 @@ const __dirname = path.dirname(__filename);
 const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "../frontend")));
-
-import('./bot.js').catch(console.error);
-import('./watcher.js').catch(console.error);
-import('./post_end_watcher.js').catch(console.error);
 
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "../frontend/index.html"));
@@ -56,6 +57,7 @@ app.post("/accept", async (req, res) => {
     
     res.json({ success: true, death: deathTimestamp });
   } catch (error) {
+    console.error('Accept error:', error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -73,6 +75,7 @@ app.get("/time/:id", async (req, res) => {
     if (!rows.length) return res.status(404).json({ error: "User not found" });
     res.json({ death: rows[0].death_timestamp });
   } catch (error) {
+    console.error('Time error:', error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -82,4 +85,3 @@ app.listen(PORT, async () => {
   await initDB();
   console.log("🕳 COUNTDOWN SERVER RUNNING");
 });
-
