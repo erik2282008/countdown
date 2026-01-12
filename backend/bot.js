@@ -1,5 +1,8 @@
 import TelegramBot from 'node-telegram-bot-api';
 import { pool } from './db.js';
+import './watcher.js';
+import './post_end_watcher.js';
+import './group_watcher.js';
 
 const token = process.env.BOT_TOKEN;
 const ADMIN_ID = 647773442;
@@ -556,7 +559,3 @@ export async function sendWarningMessage(telegramId, message) {
 console.log('🤖 COUNTDOWN BOT STARTED SUCCESSFULLY');
 console.log(`🔐 ADMIN ID: ${ADMIN_ID}`);
 console.log(`🔐 ADMIN USERNAME: ${ADMIN_USERNAME}`);
-
-import './watcher.js';
-import './post_end_watcher.js';
-import './group_watcher.js';
