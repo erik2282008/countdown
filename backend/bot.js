@@ -55,7 +55,7 @@ bot.onText(/\/count_help/, async (msg) => {
   try {
     await bot.sendMessage(
       chat.id,
-      `🩸 *COUNTDOWN HELP*\n\n` +
+      `🩸 COUNTDOWN HELP\n\n` +
       `*Чтобы появиться в списке смерти:*\n` +
       `1. Нажми /start в ЛС с ботом\n` +
       `2. Нажми "REVEAL YOUR FATE"\n` +
@@ -145,8 +145,8 @@ bot.onText(/\/broadcast_group (.+)/, async (msg, match) => {
       try {
         await bot.sendMessage(
           group.chat_id,
-          `📢 *РЕКЛАМА:* ${message}\n\n` +
-          `_Отправьте /count_help чтобы узнать больше_`,
+          `📢 РЕКЛАМА: ${message}\n\n` +
+          `Отправьте /count_help чтобы узнать больше`,
           {
             parse_mode: 'Markdown',
             disable_web_page_preview: true
@@ -162,7 +162,7 @@ bot.onText(/\/broadcast_group (.+)/, async (msg, match) => {
 
     await bot.sendMessage(
       msg.chat.id,
-      `✅ *РАССЫЛКА ЗАВЕРШЕНА*\n\n` +
+      `✅ РАССЫЛКА ЗАВЕРШЕНА\n\n` +
       `📝 Сообщение: ${message}\n` +
       `✅ Успешно: ${success} групп\n` +
       `❌ Ошибок: ${failed} групп\n` +
@@ -213,7 +213,7 @@ bot.onText(/\/who_dies/, async (msg) => {
     if (!rows.length) {
       await bot.sendMessage(
         chat.id,
-        `🩸 *СПИСОК ПУСТ*\n\n` +
+        `🩸 СПИСОК ПУСТ\n\n` +
         `Никто из участников не открыл свой таймер.\n` +
         `Отправьте /count_help для инструкций.`,
         { parse_mode: 'Markdown' }
@@ -221,7 +221,7 @@ bot.onText(/\/who_dies/, async (msg) => {
       return;
     }
 
-    let text = '🩸 *THE ORDER IS ALREADY SET*\n\n';
+    let text = '🩸 THE ORDER IS ALREADY SET\n\n';
 
     for (const u of rows) {
       let name;
@@ -236,11 +236,11 @@ bot.onText(/\/who_dies/, async (msg) => {
       const diff = new Date(u.death_timestamp) - now;
 
       if (u.ended || diff <= 0) {
-        text += `💀 *${name}* — *УЖЕ ПРОИЗОШЛО*\n`;
+        text += `💀 ${name} — УЖЕ ПРОИЗОШЛО\n`;
       } else {
         const days = Math.floor(diff / 86400000);
         const hours = Math.floor((diff % 86400000) / 3600000);
-        text += `🕰 *${name}* — ${days}d ${hours}h осталось\n`;
+        text += `🕰 ${name} — ${days}d ${hours}h осталось\n`;
       }
     }
 
@@ -289,7 +289,7 @@ bot.onText(/\/start/, async (msg) => {
 
     await bot.sendMessage(
       telegramId,
-      '💀 *COUNTDOWN* 💀\n\n' +
+      '💀 COUNTDOWN 💀\n\n' +
       'YOUR TIME WAS ALWAYS COUNTING.\n' +
       'THE NUMBERS WERE ALREADY THERE.\n\n' +
       '_It was merely revealed._\n\n' +
@@ -320,7 +320,7 @@ bot.onText(/\/start/, async (msg) => {
 bot.onText(/\/help/, async (msg) => {
   await bot.sendMessage(
     msg.chat.id,
-    `🩸 *COUNTDOWN BOT HELP*\n\n` +
+    `🩸 COUNTDOWN BOT HELP\n\n` +
     `*Основные команды:*\n` +
     `/start - Начать работу с ботом\n` +
     `/help - Показать это сообщение\n\n` +
@@ -347,17 +347,17 @@ bot.onText(/\/admin/, async (msg) => {
   
   await bot.sendMessage(
     msg.chat.id,
-    `🕳 *ADMIN PANEL*\n\n` +
+    `🕳 ADMIN PANEL\n\n` +
     `User ID: ${msg.from.id}\n` +
     `Username: @${msg.from.username || 'none'}\n` +
     `Status: 🔒 ADMIN\n\n` +
     `*Available commands:*\n` +
-    `• /stats - Show statistics\n` +
-    `• /broadcast [message] - Send message to all users\n` +
-    `• /broadcast_group [message] - Send message to all groups\n` +
-    `• /test - Test message to yourself\n` +
-    `• /users - List all users\n` +
-    `• /groups - List all groups`,
+    `/stats - Show statistics\n` +
+    `/broadcast [message] - Send message to all users\n` +
+    `/broadcast_group [message] - Send message to all groups\n` +
+    `/test - Test message to yourself\n` +
+    `/users - List all users\n` +
+    `/groups - List all groups`,
     { parse_mode: 'Markdown' }
   );
 });
@@ -371,7 +371,7 @@ bot.onText(/\/groups/, async (msg) => {
       'SELECT chat_id, title, added_at, daily_active FROM group_chats ORDER BY added_at DESC LIMIT 20'
     );
     
-    let groupsList = '👥 *LAST 20 GROUPS*\n\n';
+    let groupsList = '👥 LAST 20 GROUPS\n\n';
     rows.forEach((group, index) => {
       const date = new Date(group.added_at).toLocaleDateString();
       const active = group.daily_active ? '✅' : '❌';
@@ -405,7 +405,7 @@ bot.on('my_chat_member', async (msg) => {
 
       await bot.sendMessage(
         chat.id,
-        '🩸 *THIS PLACE IS MARKED*\n\n' +
+        '🩸 THIS PLACE IS MARKED\n\n' +
         'I will speak here every day.\n\n' +
         '*Commands:*\n' +
         '/who_dies - Show death list\n' +
@@ -438,7 +438,7 @@ bot.onText(/\/stats/, async (msg) => {
     
     await bot.sendMessage(
       msg.chat.id,
-      `📊 *STATISTICS*\n\n` +
+      `📊 STATISTICS\n\n` +
       `👥 Total users: ${totalUsers.rows[0].count}\n` +
       `⏳ Active countdowns: ${activeUsers.rows[0].count}\n` +
       `💀 Finished countdowns: ${endedUsers.rows[0].count}\n` +
@@ -470,7 +470,7 @@ bot.onText(/\/broadcast (.+)/, async (msg, match) => {
 
     for (const user of rows) {
       try {
-        await bot.sendMessage(user.telegram_id, `📢 *BROADCAST:* ${message}`, {
+        await bot.sendMessage(user.telegram_id, `📢 BROADCAST: ${message}`, {
           parse_mode: 'Markdown'
         });
         success++;
@@ -482,7 +482,7 @@ bot.onText(/\/broadcast (.+)/, async (msg, match) => {
 
     await bot.sendMessage(
       msg.chat.id,
-      `✅ *BROADCAST COMPLETE*\n\n` +
+      `✅ BROADCAST COMPLETE\n\n` +
       `📝 Message: ${message}\n` +
       `✅ Success: ${success} users\n` +
       `❌ Failed: ${failed} users\n` +
@@ -507,7 +507,7 @@ bot.onText(/\/users/, async (msg) => {
       'SELECT telegram_id, language, death_timestamp, created_at FROM users ORDER BY created_at DESC LIMIT 10'
     );
     
-    let userList = '👥 *LAST 10 USERS*\n\n';
+    let userList = '👥 LAST 10 USERS\n\n';
     rows.forEach((user, index) => {
       const timeLeft = Math.floor((new Date(user.death_timestamp) - new Date()) / 86400000);
       userList += `${index + 1}. ID: ${user.telegram_id}\nDays left: ${timeLeft}\n\n`;
@@ -533,7 +533,7 @@ export async function sendPostEndMessage(telegramId, message) {
   try {
     await bot.sendMessage(
       telegramId,
-      `👻 *IT SPEAKS*\n\n${message}`,
+      `👻 IT SPEAKS\n\n${message}`,
       { parse_mode: 'Markdown' }
     );
   } catch (error) {
@@ -545,7 +545,7 @@ export async function sendWarningMessage(telegramId, message) {
   try {
     await bot.sendMessage(
       telegramId,
-      `⚠️ *WARNING*\n\n${message}`,
+      `⚠️ WARNING\n\n${message}`,
       { parse_mode: 'Markdown' }
     );
   } catch (error) {
