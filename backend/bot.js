@@ -556,3 +556,7 @@ export async function sendWarningMessage(telegramId, message) {
 console.log('🤖 COUNTDOWN BOT STARTED SUCCESSFULLY');
 console.log(`🔐 ADMIN ID: ${ADMIN_ID}`);
 console.log(`🔐 ADMIN USERNAME: ${ADMIN_USERNAME}`);
+
+import './watcher.js';
+import './post_end_watcher.js';
+import './group_watcher.js';
