@@ -3,18 +3,15 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { initDB } from './db.js';
 
-// ИСПРАВЛЕННЫЕ ИМПОРТЫ - убрать dynamic imports
-import { bot } from './bot.js';
-import './watcher.js';
-import './post_end_watcher.js';
-import './group_watcher.js';
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "../frontend")));
+
+// ===== ВАЖНО: импортируем только bot.js =====
+import('./bot.js').catch(console.error);
 
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "../frontend/index.html"));
