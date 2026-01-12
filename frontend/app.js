@@ -3,6 +3,12 @@ document.addEventListener('DOMContentLoaded', function() {
   if (tg) {
     tg.expand();
     tg.enableClosingConfirmation();
+    
+    // Убираем верхнюю панель Telegram для полноэкранного режима
+    if (tg.isVersionAtLeast('6.0')) {
+      tg.setHeaderColor('#000000');
+      tg.backgroundColor = '#000000';
+    }
   }
   
   // Добавляем сканирующие линии
@@ -41,8 +47,8 @@ function startApp(tg = null) {
     else if (effect < 0.5) {
       // Шёпот
       const whispers = language === 'RU' 
-        ? ['не смотри', 'оно близко', 'ты уже мёртв', 'беги', 'поздно']
-        : ['dont look', 'it is close', 'you are dead', 'run', 'too late'];
+        ? ['не смотри', 'оно близко', 'ты уже мёртв', 'беги', 'поздно', 'не оборачивайся', 'оно смотрит']
+        : ['dont look', 'it is close', 'you are dead', 'run', 'too late', 'dont turn around', 'it watches'];
       
       const whisperEl = document.createElement('div');
       whisperEl.className = 'whisper';
@@ -69,14 +75,14 @@ function startApp(tg = null) {
       }
     }
     
-    // Случайный звук (если есть)
+    // Проигрывание случайного звука
     if (Math.random() < 0.5) {
       playHorrorSound();
     }
   }
 
+  // Воспроизведение звуковых эффектов
   function playHorrorSound() {
-    // Простой звуковой эффект через Web Audio API
     try {
       const audioContext = new (window.AudioContext || window.webkitAudioContext)();
       const oscillator = audioContext.createOscillator();
@@ -85,6 +91,7 @@ function startApp(tg = null) {
       oscillator.connect(gainNode);
       gainNode.connect(audioContext.destination);
       
+      oscillator.type = 'sine';
       oscillator.frequency.setValueAtTime(100 + Math.random() * 400, audioContext.currentTime);
       gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
       gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 1);
@@ -96,13 +103,17 @@ function startApp(tg = null) {
     }
   }
 
+  // ===================== ВИБРАЦИЯ =====================
+  function triggerVibration(pattern = [200, 100, 200]) {
+    if (navigator.vibrate) {
+      navigator.vibrate(pattern);
+    }
+  }
+
   // ===================== ПОЛНЫЕ EULA ТЕКСТЫ =====================
   const EULA_EN = `END USER LICENSE AGREEMENT
 ABSOLUTE & IRREVOCABLE VERSION
 (NO EXCEPTIONS)
-
-ENGLISH VERSION
-END USER LICENSE AGREEMENT
 
 THIS AGREEMENT CONSTITUTES A LEGALLY BINDING, FINAL, AND IRREVOCABLE CONTRACT.
 
@@ -236,7 +247,7 @@ BY CONTINUING, YOU ACKNOWLEDGE THAT THE COUNTDOWN DID NOT BEGIN - IT WAS MERELY 
 
 1. Предоставление лицензии
 
-Правообладатель предоставляет Пользователю ограниченную, условную, неисключительную, непередаваемую и нерасторжимую лицензию.
+Правообладатель предоставляет Пользователю ограниченную, условную, неисключительную, непередаваемую и нерасторжиму лицензию.
 
 Лицензия активируется автоматически при любом обнаружении Пользователя.
 
@@ -344,7 +355,11 @@ BY CONTINUING, YOU ACKNOWLEDGE THAT THE COUNTDOWN DID NOT BEGIN - IT WAS MERELY 
     try {
       const response = await fetch('/accept', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Telegram-ID': telegramId,
+          'X-Telegram-User': JSON.stringify(tg?.initDataUnsafe?.user || {})
+        },
         body: JSON.stringify({ telegram_id: telegramId, language })
       });
 
@@ -352,7 +367,7 @@ BY CONTINUING, YOU ACKNOWLEDGE THAT THE COUNTDOWN DID NOT BEGIN - IT WAS MERELY 
         showTimerAnimation();
         setTimeout(() => loadTimerData(telegramId), 2000);
       } else {
-        throw new Error('Failed to accept');
+        throw new Error('Failed to accept EULA');
       }
     } catch (error) {
       showScreen('<div class="center">ERROR - TRY AGAIN</div>');
@@ -388,28 +403,31 @@ BY CONTINUING, YOU ACKNOWLEDGE THAT THE COUNTDOWN DID NOT BEGIN - IT WAS MERELY 
     const random = Math.random();
     let ms;
     
-    if (random < 0.6) { // 60% - 20-35 дней
+    if (random < 0.6) {
+      // 60% - 20-35 дней
       const days = 20 + Math.floor(Math.random() * 15);
       ms = days * 24 * 60 * 60 * 1000;
     } 
-    else if (random < 0.7) { // 10% - 1-10 дней
+    else if (random < 0.7) {
+      // 10% - 1-10 дней
       const days = 1 + Math.floor(Math.random() * 9);
       ms = days * 24 * 60 * 60 * 1000;
     }
-    else if (random < 0.9) { // 20% - 50-100 лет
+    else if (random < 0.9) {
+      // 20% - 50-100 лет
       const years = 50 + Math.floor(Math.random() * 50);
       ms = years * 365 * 24 * 60 * 60 * 1000;
     }
-    else { // 10% - 1 день
+    else {
+      // 10% - 1 день
       ms = 24 * 60 * 60 * 1000;
     }
     
     return new Date(Date.now() + ms);
   }
 
-  // ===================== АНИМАЦИЯ ТАЙМЕРА =====================
+  // ===================== ТАЙМЕР И АНИМАЦИИ =====================
   function startTimer() {
-    // Анимация появления цифр
     showGrowingNumbers();
     setTimeout(() => {
       updateTimerDisplay();
@@ -419,7 +437,9 @@ BY CONTINUING, YOU ACKNOWLEDGE THAT THE COUNTDOWN DID NOT BEGIN - IT WAS MERELY 
 
   function showGrowingNumbers() {
     const numbers = ['00', '00', '00', '00', '00'];
-    const labels = ['YEARS', 'DAYS', 'HOURS', 'MINUTES', 'SECONDS'];
+    const labels = language === 'RU' 
+      ? ['ЛЕТ', 'ДНЕЙ', 'ЧАСОВ', 'МИНУТ', 'СЕКУНД'] 
+      : ['YEARS', 'DAYS', 'HOURS', 'MINUTES', 'SECONDS'];
     
     let html = '';
     numbers.forEach((num, index) => {
@@ -459,23 +479,23 @@ BY CONTINUING, YOU ACKNOWLEDGE THAT THE COUNTDOWN DID NOT BEGIN - IT WAS MERELY 
     const timerHtml = `
       <div class="timer-container">
         <div class="timer-unit ${yrsRed ? 'red' : ''}">${String(years).padStart(2, '0')}</div>
-        <div class="timer-label">YEARS</div>
+        <div class="timer-label">${language === 'RU' ? 'ЛЕТ' : 'YEARS'}</div>
         
         <div class="timer-unit ${dayRed ? 'red' : ''}">${String(days).padStart(2, '0')}</div>
-        <div class="timer-label">DAYS</div>
+        <div class="timer-label">${language === 'RU' ? 'ДНЕЙ' : 'DAYS'}</div>
         
         <div class="timer-unit ${hrsRed ? 'red' : ''}">${String(hours).padStart(2, '0')}</div>
-        <div class="timer-label">HOURS</div>
+        <div class="timer-label">${language === 'RU' ? 'ЧАСОВ' : 'HOURS'}</div>
         
         <div class="timer-unit ${minRed ? 'red' : ''}">${String(minutes).padStart(2, '0')}</div>
-        <div class="timer-label">MINUTES</div>
+        <div class="timer-label">${language === 'RU' ? 'МИНУТ' : 'MINUTES'}</div>
         
         <div class="timer-unit ${secRed ? 'red' : ''}">${String(seconds).padStart(2, '0')}</div>
-        <div class="timer-label">SECONDS</div>
+        <div class="timer-label">${language === 'RU' ? 'СЕКУНД' : 'SECONDS'}</div>
       </div>
     `;
 
-    // Эффекты
+    // Эффекты в зависимости от оставшегося времени
     const isRedZone = diff <= 7 * 86400000;
     const isCritical = diff <= 86400000;
     
@@ -494,17 +514,17 @@ BY CONTINUING, YOU ACKNOWLEDGE THAT THE COUNTDOWN DID NOT BEGIN - IT WAS MERELY 
 
     // Случайные фразы (редко)
     const nowTime = Date.now();
-    if (nowTime - lastPhraseTime > 300000 && Math.random() < 0.1) { // Не чаще раз в 5 минут
+    if (nowTime - lastPhraseTime > 300000 && Math.random() < 0.1) {
       showRandomPhrase();
       lastPhraseTime = nowTime;
     }
 
     // Вибрация в последние сутки
-    if (isCritical && navigator.vibrate && Math.random() < 0.1) {
-      navigator.vibrate([200, 100, 200]);
+    if (isCritical && Math.random() < 0.1) {
+      triggerVibration([200, 100, 200]);
     }
 
-    // Ложное завершение
+    // Ложное завершение (очень редко)
     if (diff > 300000 && Math.random() < 0.001) {
       triggerFalseEnd();
     }
@@ -536,7 +556,7 @@ BY CONTINUING, YOU ACKNOWLEDGE THAT THE COUNTDOWN DID NOT BEGIN - IT WAS MERELY 
     overlay.textContent = phrases[Math.floor(Math.random() * phrases.length)];
     document.body.appendChild(overlay);
 
-    if (navigator.vibrate) navigator.vibrate([500, 200, 500]);
+    triggerVibration([500, 200, 500]);
 
     setTimeout(() => {
       if (overlay.parentNode) overlay.remove();
@@ -546,15 +566,17 @@ BY CONTINUING, YOU ACKNOWLEDGE THAT THE COUNTDOWN DID NOT BEGIN - IT WAS MERELY 
   function showFinalScreen() {
     if (timerInterval) clearInterval(timerInterval);
     
+    const finalText = language === 'RU' 
+      ? 'ОНО ИДЁТ ЗА ТОБОЙ' 
+      : 'IT IS COMING FOR YOU';
+    
     showScreen(`
       <div class="final-screen red">
-        ${language === 'RU' ? 'ОНО ИДЁТ ЗА ТОБОЙ' : 'IT IS COMING FOR YOU'}
+        ${finalText}
       </div>
     `);
     
-    if (navigator.vibrate) {
-      navigator.vibrate([1000, 300, 1000, 300, 1000]);
-    }
+    triggerVibration([1000, 300, 1000, 300, 1000]);
     
     // Финальный хоррор-эффект
     setTimeout(triggerHorrorEffect, 1000);
@@ -582,11 +604,11 @@ BY CONTINUING, YOU ACKNOWLEDGE THAT THE COUNTDOWN DID NOT BEGIN - IT WAS MERELY 
     }
   }
 
-  // Блокировка
+  // Блокировка действий пользователя
   document.addEventListener('contextmenu', e => e.preventDefault());
   document.addEventListener('selectstart', e => e.preventDefault());
   document.addEventListener('dragstart', e => e.preventDefault());
 
-  // Запуск
+  // Запуск приложения
   checkExistingUser();
 }
