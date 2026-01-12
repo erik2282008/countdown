@@ -64,7 +64,6 @@ bot.on('message', (msg) => {
 bot.on('message', async (msg) => {
   if (!msg.text) return;
   
-  // Обрабатываем coun_help в любом формате
   if (msg.text.includes('/coun_help')) {
     console.log('🎯 COUN_HELP command detected in chat type:', msg.chat.type);
     
@@ -522,3 +521,4 @@ console.log('🤖 COUNTDOWN BOT STARTED SUCCESSFULLY');
 console.log(`🔐 ADMIN ID: ${ADMIN_ID}`);
 console.log(`🔐 ADMIN USERNAME: ${ADMIN_USERNAME}`);
 console.log(`📱 APP URL: ${process.env.APP_URL}`);
+
