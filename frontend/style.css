@@ -15,6 +15,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
 }
 
 #app {
@@ -23,9 +24,10 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
 }
 
-/* Language Screen */
+/* ===================== ЭКРАН ВЫБОРА ЯЗЫКА ===================== */
 .center {
   display: flex;
   flex-direction: column;
@@ -46,6 +48,8 @@ body {
   min-width: 280px;
   position: relative;
   overflow: hidden;
+  background: rgba(0,0,0,0.8);
+  backdrop-filter: blur(10px);
 }
 
 .choice:hover {
@@ -53,9 +57,25 @@ body {
   border-color: #ff0000;
   transform: scale(1.08);
   text-shadow: 0 0 10px #ff0000;
+  background: rgba(255,0,0,0.1);
 }
 
-/* EULA Screen */
+.choice::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  transition: left 0.6s;
+}
+
+.choice:hover::before {
+  left: 100%;
+}
+
+/* ===================== ЭКРАН EULA ===================== */
 .eula {
   width: 96%;
   height: 96%;
@@ -63,6 +83,8 @@ body {
   padding: 25px;
   text-align: left;
   position: relative;
+  background: rgba(0,0,0,0.9);
+  border: 1px solid rgba(255,255,255,0.1);
 }
 
 .eula pre {
@@ -71,6 +93,24 @@ body {
   line-height: 1.7;
   font-family: 'Courier New', monospace;
   letter-spacing: 0.5px;
+  color: #ccc;
+}
+
+.eula::-webkit-scrollbar {
+  width: 8px;
+}
+
+.eula::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.1);
+}
+
+.eula::-webkit-scrollbar-thumb {
+  background: #ff0000;
+  border-radius: 4px;
+}
+
+.eula::-webkit-scrollbar-thumb:hover {
+  background: #ff4444;
 }
 
 .accept {
@@ -83,6 +123,7 @@ body {
   transition: all 0.3s;
   min-width: 220px;
   position: relative;
+  background: rgba(0,0,0,0.8);
 }
 
 .accept:hover {
@@ -90,9 +131,10 @@ body {
   border-color: #ff0000;
   transform: scale(1.08);
   text-shadow: 0 0 15px #ff0000;
+  background: rgba(255,0,0,0.1);
 }
 
-/* Timer Screen - КРУПНЫЙ ТАЙМЕР */
+/* ===================== КОНТЕЙНЕР ТАЙМЕРА ===================== */
 .timer-container {
   display: flex;
   flex-direction: column;
@@ -102,6 +144,7 @@ body {
   width: 100vw;
   text-align: center;
   padding: 15px;
+  position: relative;
 }
 
 .timer-unit {
@@ -117,6 +160,7 @@ body {
   width: 100%;
   font-variant-numeric: tabular-nums;
   text-shadow: 0 0 5px rgba(255,255,255,0.5);
+  transition: all 0.3s;
 }
 
 .timer-label {
@@ -127,11 +171,13 @@ body {
   text-transform: uppercase;
   min-height: 28px;
   font-weight: bold;
+  color: #ccc;
 }
 
+/* ===================== ЦВЕТА И АНИМАЦИИ ===================== */
 .red {
   color: #ff0000 !important;
-  text-shadow: 0 0 10px #ff0000, 0 0 20px #ff0000 !important;
+  text-shadow: 0 0 10px #ff0000, 0 0 20px #ff0000, 0 0 30px #ff0000 !important;
 }
 
 .temporary-red {
@@ -139,11 +185,17 @@ body {
 }
 
 @keyframes redFlash {
-  0%, 100% { color: white; text-shadow: 0 0 5px rgba(255,255,255,0.5); }
-  50% { color: #ff0000; text-shadow: 0 0 10px #ff0000, 0 0 20px #ff0000; }
+  0%, 100% { 
+    color: white; 
+    text-shadow: 0 0 5px rgba(255,255,255,0.5); 
+  }
+  50% { 
+    color: #ff0000; 
+    text-shadow: 0 0 10px #ff0000, 0 0 20px #ff0000, 0 0 30px #ff0000; 
+  }
 }
 
-/* Glitch Effects */
+/* ===================== ХОРРОР-ЭФФЕКТЫ ===================== */
 .glitch {
   animation: glitch 0.4s infinite;
 }
@@ -187,7 +239,7 @@ body {
   75% { opacity: 0.8; }
 }
 
-/* Phrases */
+/* ===================== ФРАЗЫ И ШЁПОТЫ ===================== */
 .phrase {
   position: fixed;
   bottom: 30%;
@@ -198,8 +250,9 @@ body {
   pointer-events: none;
   animation: fadeInOut 5s ease-in-out;
   font-weight: 900;
-  text-shadow: 0 0 10px #ff0000;
+  text-shadow: 0 0 10px #ff0000, 0 0 20px #ff0000;
   z-index: 100;
+  padding: 0 20px;
 }
 
 @keyframes fadeInOut {
@@ -220,14 +273,22 @@ body {
   animation: whisperFade 6s ease-in-out;
   font-weight: bold;
   z-index: 50;
+  text-align: center;
+  width: 80%;
 }
 
 @keyframes whisperFade {
-  0%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
-  20%, 80% { opacity: 0.15; transform: translate(-50%, -50%) scale(1); }
+  0%, 100% { 
+    opacity: 0; 
+    transform: translate(-50%, -50%) scale(0.8); 
+  }
+  20%, 80% { 
+    opacity: 0.15; 
+    transform: translate(-50%, -50%) scale(1); 
+  }
 }
 
-/* False End */
+/* ===================== ЛОЖНОЕ ЗАВЕРШЕНИЕ ===================== */
 .false-end {
   position: fixed;
   top: 0;
@@ -243,7 +304,9 @@ body {
   z-index: 9999;
   animation: shake 0.3s infinite;
   font-weight: 900;
-  text-shadow: 0 0 20px #ff0000;
+  text-shadow: 0 0 20px #ff0000, 0 0 40px #ff0000;
+  padding: 0 20px;
+  text-align: center;
 }
 
 @keyframes shake {
@@ -253,7 +316,7 @@ body {
   75% { transform: translate(-4px, -6px) rotate(-1deg); }
 }
 
-/* Final Screen */
+/* ===================== ФИНАЛЬНЫЙ ЭКРАН ===================== */
 .final-screen {
   display: flex;
   align-items: center;
@@ -264,7 +327,8 @@ body {
   text-align: center;
   animation: pulse 3s infinite, finalShake 2s infinite;
   font-weight: 900;
-  text-shadow: 0 0 15px #ff0000;
+  text-shadow: 0 0 15px #ff0000, 0 0 30px #ff0000;
+  padding: 0 20px;
 }
 
 @keyframes pulse {
@@ -278,7 +342,7 @@ body {
   75% { transform: translateX(5px); }
 }
 
-/* Calculation Screen */
+/* ===================== ЭКРАН РАСЧЁТА ===================== */
 .calculation-screen {
   display: flex;
   flex-direction: column;
@@ -294,13 +358,15 @@ body {
   font-size: 40px;
   margin-bottom: 35px;
   font-weight: 900;
-  text-shadow: 0 0 10px #fff;
+  text-shadow: 0 0 10px #fff, 0 0 20px #fff;
+  color: #fff;
 }
 
 .calculation-subtitle {
   font-size: 32px;
   opacity: 0.9;
   font-weight: bold;
+  color: #ccc;
 }
 
 @keyframes calcPulse {
@@ -308,7 +374,7 @@ body {
   50% { transform: scale(1.05); }
 }
 
-/* Blood Effects */
+/* ===================== КРОВАВЫЕ ЭФФЕКТЫ ===================== */
 .blood-drip {
   position: fixed;
   top: -100px;
@@ -317,6 +383,7 @@ body {
   background: linear-gradient(to bottom, #ff0000, transparent);
   animation: bloodDrip 3s linear;
   z-index: 200;
+  pointer-events: none;
 }
 
 @keyframes bloodDrip {
@@ -324,6 +391,7 @@ body {
   100% { top: 100vh; opacity: 0; }
 }
 
+/* ===================== СКАНИРУЮЩИЕ ЛИНИИ ===================== */
 .scan-lines {
   position: fixed;
   top: 0;
@@ -344,7 +412,7 @@ body {
   100% { transform: translateY(4px); }
 }
 
-/* Number Animation */
+/* ===================== АНИМАЦИЯ ЧИСЕЛ ===================== */
 .number-animation {
   animation: numberGrow 0.8s ease-out;
 }
@@ -353,4 +421,175 @@ body {
   0% { transform: scale(0.8); opacity: 0; }
   50% { transform: scale(1.1); opacity: 1; }
   100% { transform: scale(1); opacity: 1; }
+}
+
+/* ===================== АДАПТИВНОСТЬ ===================== */
+@media (max-width: 768px) {
+  .timer-unit {
+    font-size: 52px;
+    margin: 12px 0;
+    min-height: 65px;
+  }
+  
+  .timer-label {
+    font-size: 14px;
+    margin-top: 5px;
+    min-height: 22px;
+  }
+  
+  .choice {
+    font-size: 28px;
+    padding: 20px 35px;
+    min-width: 240px;
+    margin: 25px 0;
+  }
+  
+  .accept {
+    font-size: 26px;
+    padding: 20px 45px;
+  }
+  
+  .phrase {
+    font-size: 20px;
+    bottom: 25%;
+  }
+  
+  .false-end {
+    font-size: 40px;
+  }
+  
+  .final-screen {
+    font-size: 36px;
+  }
+  
+  .calculation-title {
+    font-size: 32px;
+  }
+  
+  .calculation-subtitle {
+    font-size: 26px;
+  }
+}
+
+@media (max-width: 480px) {
+  .timer-unit {
+    font-size: 42px;
+    margin: 8px 0;
+    min-height: 55px;
+    letter-spacing: 4px;
+  }
+  
+  .timer-label {
+    font-size: 12px;
+    letter-spacing: 2px;
+    min-height: 18px;
+  }
+  
+  .choice {
+    font-size: 24px;
+    padding: 18px 30px;
+    min-width: 200px;
+    margin: 20px 0;
+  }
+  
+  .accept {
+    font-size: 22px;
+    padding: 18px 35px;
+  }
+  
+  .eula {
+    padding: 15px;
+  }
+  
+  .eula pre {
+    font-size: 11px;
+  }
+}
+
+/* ===================== ТЕМНЫЙ РЕЖИМ СКРОЛЛБАРА ===================== */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.1);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #ff0000;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #ff4444;
+}
+
+/* ===================== СИСТЕМНЫЕ СООБЩЕНИЯ ===================== */
+.error-message {
+  color: #ff0000;
+  font-size: 18px;
+  text-align: center;
+  padding: 20px;
+  animation: errorPulse 2s infinite;
+}
+
+@keyframes errorPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.loading {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(255,255,255,0.3);
+  border-radius: 50%;
+  border-top-color: #ff0000;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ===================== ПОДДЕРЖКА ВЫСОКОЧАСТОТНОГО ЭКРАНА ===================== */
+@media (min-width: 1200px) {
+  .timer-unit {
+    font-size: 72px;
+  }
+  
+  .timer-label {
+    font-size: 18px;
+  }
+}
+
+/* ===================== ПОДДЕРЖКА ЛАНДСКЕЙП РЕЖИМА ===================== */
+@media (orientation: landscape) and (max-height: 500px) {
+  .timer-unit {
+    font-size: 52px;
+    margin: 10px 0;
+    min-height: 60px;
+  }
+  
+  .timer-label {
+    font-size: 12px;
+    margin-top: 3px;
+    min-height: 16px;
+  }
+  
+  .timer-container {
+    padding: 5px;
+  }
+}
+
+/* ===================== АНИМАЦИЯ ЗАГРУЗКИ ===================== */
+.initial-loading {
+  font-size: 18px;
+  color: #ccc;
+  animation: loadingPulse 2s infinite;
+}
+
+@keyframes loadingPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
