@@ -155,6 +155,7 @@ bot.onText(/\/start/, async (msg) => {
 
 // ===================== /coun_help КОМАНДА =====================
 bot.onText(/\/coun_help/, async (msg) => {
+  // КОМАНДА РАБОТАЕТ В ЛЮБОМ ЧАТЕ - И В ГРУППАХ И В ЛИЧКЕ
   await bot.sendMessage(
     msg.chat.id,
     `👻 *HOW TO APPEAR IN THE COUNTDOWN LIST*` + `\n\n` +
@@ -182,6 +183,7 @@ bot.onText(/\/coun_help/, async (msg) => {
 
 // ===================== /group_help КОМАНДА =====================
 bot.onText(/\/group_help/, async (msg) => {
+  // КОМАНДА РАБОТАЕТ В ЛЮБОМ ЧАТЕ
   await bot.sendMessage(
     msg.chat.id,
     `🔮 *HOW TO ADD THE COUNTDOWN TO YOUR GROUP*` + `\n\n` +
@@ -263,7 +265,7 @@ bot.onText(/\/who_dies/, async (msg) => {
       return;
     }
 
-    // СООБЩЕНИЕ В ФОРМАТЕ КАК ВЫ ПРОСИЛИ!
+    // СООБЩЕНИЕ В ФОРМАТЕ КАК ПРОСИЛИ!
     let text = '🩸 *THE ORDER IS ALREADY SET*' + `\n\n`;
 
     for (const u of rows) {
@@ -287,7 +289,7 @@ bot.onText(/\/who_dies/, async (msg) => {
       }
     }
 
-    // ТОЧНО КАК ВЫ ПРОСИЛИ!
+    // ТОЧНО КАК ПРОСИЛИ!
     text += `\n*Send /coun\\_help to join this list*`;
 
     await bot.sendMessage(chat.id, text, { parse_mode: 'MarkdownV2' });
@@ -302,7 +304,7 @@ bot.onText(/\/who_dies/, async (msg) => {
   }
 });
 
-// ===================== АДМИН КОМАНДЫ (скрытые, работают но не в меню) =====================
+// ===================== АДМИН КОМАНДЫ (скрытые) =====================
 
 bot.onText(/\/admin/, async (msg) => {
   if (!isAdmin(msg)) return;
@@ -460,7 +462,7 @@ async function sendDailyGroupMessages() {
 
         if (!users.rows.length) continue;
 
-        // ТОЧНО КАК ВЫ ПРОСИЛИ - ФОРМАТ СООБЩЕНИЯ!
+        // ТОЧНО КАК ПРОСИЛИ - ФОРМАТ СООБЩЕНИЯ!
         let message = '🩸 *THE ORDER IS ALREADY SET*' + `\n\n`;
 
         for (const u of users.rows) {
@@ -476,7 +478,7 @@ async function sendDailyGroupMessages() {
           }
         }
 
-        // ТОЧНО КАК ВЫ ПРОСИЛИ!
+        // ТОЧНО КАК ПРОСИЛИ!
         message += `\n*Send /coun\\_help to join this list*`;
 
         await bot.sendMessage(row.chat_id, message, { parse_mode: 'MarkdownV2' });
