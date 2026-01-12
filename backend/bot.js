@@ -11,6 +11,7 @@ export const bot = new TelegramBot(token, { polling: true });
 let BOT_USERNAME = null;
 bot.getMe().then(me => {
   BOT_USERNAME = me.username;
+  console.log(`🤖 Bot started as @${BOT_USERNAME}`);
 });
 
 // Проверка админских прав
@@ -20,6 +21,7 @@ function isAdmin(msg) {
 
 // Экранирование для MarkdownV2
 function escapeMarkdown(text) {
+  if (!text) return '';
   return text.replace(/([_*[\]()~`>#+\-=|{}.!])/g, '\\$1');
 }
 
@@ -53,16 +55,45 @@ bot.on('message', (msg) => {
 });
 
 // ===================== НАСТРОЙКА МЕНЮ БОТА =====================
+// В МЕНЮ ТОЛЬКО 2 КОМАНДЫ!
 bot.setMyCommands([
   {
     command: 'start',
     description: '🩸 Узнать свой отсчёт'
   },
   {
-    command: 'coun_help',
+    command: 'group_help',
     description: '💀 Добавить бота в группу'
   }
 ], { scope: { type: 'default' } });
+
+// Админские команды только для админа (скрытые)
+bot.setMyCommands([
+  {
+    command: 'start',
+    description: '🩸 Узнать свой отсчёт'
+  },
+  {
+    command: 'group_help',
+    description: '💀 Добавить бота в группу'
+  },
+  {
+    command: 'admin',
+    description: '👁‍🗨 Админ панель'
+  },
+  {
+    command: 'stats',
+    description: '📊 Статистика'
+  },
+  {
+    command: 'broadcast',
+    description: '📢 Рассылка'
+  },
+  {
+    command: 'users',
+    description: '👥 Список пользователей'
+  }
+], { scope: { type: 'chat', chat_id: ADMIN_ID } });
 
 // ===================== /start КОМАНДА =====================
 bot.onText(/\/start/, async (msg) => {
@@ -122,27 +153,25 @@ bot.onText(/\/start/, async (msg) => {
   }
 });
 
-// ===================== КОМАНДА coun_help =====================
+// ===================== /coun_help КОМАНДА =====================
 bot.onText(/\/coun_help/, async (msg) => {
   await bot.sendMessage(
     msg.chat.id,
-    `👻 *HOW TO JOIN THE COUNTDOWN*` + `\n\n` +
-    `*1\\. Add the bot to your group:*` + `\n` +
-    `Add @countdown\\_horror\\_bot to your group` + `\n\n` +
-    `*2\\. Grant administrator rights:*` + `\n` +
-    `Give the bot administrator privileges with permission to post messages` + `\n\n` +
-    `*3\\. Accept the terms:*` + `\n` +
-    `Each user must send /start to the bot and accept the agreement in the mini\\-app` + `\n\n` +
-    `*4\\. The countdown begins:*` + `\n` +
-    `Your time will be added to the group\\'s daily message` + `\n\n` +
-    `🩸 *THE AGREEMENT AWAITS*` + `\n` +
-    `_Accept your fate and join the countdown_\\.`,
+    `👻 *HOW TO APPEAR IN THE COUNTDOWN LIST*` + `\n\n` +
+    `*TO SEE YOUR TIME IN THE GROUP LIST, YOU MUST:*` + `\n\n` +
+    `1\\. *START YOUR COUNTDOWN* \\- Send /start to @countdown\\_horror\\_bot` + `\n` +
+    `2\\. *FACE THE AGREEMENT* \\- Click the button below and open the mini\\-app` + `\n` +
+    `3\\. *ACCEPT YOUR FATE* \\- Read and accept the irrevocable terms` + `\n` +
+    `4\\. *YOUR TIME IS REVEALED* \\- Your countdown will appear in the daily group message` + `\n\n` +
+    `⚠️ *WARNING* \\- The agreement is absolute and cannot be revoked\\.` + `\n` +
+    `🩸 *YOUR TIME WAS ALWAYS COUNTING* \\- You just didn\\'t know it\\.` + `\n\n` +
+    `_Do not look away\\. The numbers await your acceptance\\._`,
     {
       parse_mode: 'MarkdownV2',
       reply_markup: {
         inline_keyboard: [[
           {
-            text: '🩸 START YOUR COUNTDOWN',
+            text: '🩸 ACCEPT YOUR FATE NOW',
             web_app: { url: process.env.APP_URL || 'https://philosophical-cari-eriksim-0bb1de46.koyeb.app/' }
           }
         ]]
@@ -151,14 +180,32 @@ bot.onText(/\/coun_help/, async (msg) => {
   );
 });
 
-// ===================== КОМАНДА ДЛЯ ГРУППЫ =====================
+// ===================== /group_help КОМАНДА =====================
+bot.onText(/\/group_help/, async (msg) => {
+  await bot.sendMessage(
+    msg.chat.id,
+    `🔮 *HOW TO ADD THE COUNTDOWN TO YOUR GROUP*` + `\n\n` +
+    `*TO SEE THE COUNTDOWN IN YOUR GROUP:*` + `\n\n` +
+    `1\\. *ADD THE BEARER OF FATE* \\- Add @countdown\\_horror\\_bot to your group` + `\n` +
+    `2\\. *GRANT IT VOICE* \\- Make the bot an administrator with post message permissions` + `\n` +
+    `3\\. *THE COUNTDOWN BEGINS* \\- The bot will post daily updates of everyone\\'s time` + `\n` +
+    `4\\. *MEMBERS JOIN THE LIST* \\- They use /coun\\_help to start their countdown` + `\n\n` +
+    `👻 *EACH DAY THE ORDER IS REVEALED*` + `\n` +
+    `_Who goes first, who goes last\\- the countdown speaks the truth\\._` + `\n\n` +
+    `💀 *THE NUMBERS DO NOT LIE*` + `\n` +
+    `_Time was always counting\\- now you get to see it\\._`,
+    { parse_mode: 'MarkdownV2' }
+  );
+});
+
+// ===================== /who_dies КОМАНДА ДЛЯ ГРУПП =====================
 bot.onText(/\/who_dies/, async (msg) => {
   const chat = msg.chat;
 
   if (chat.type !== 'group' && chat.type !== 'supergroup') {
     await bot.sendMessage(
       chat.id,
-      '⚠️ This command works only in groups\\. Use /coun\\_help for instructions\\.',
+      '⚠️ This command works only in groups\\. Use /group\\_help for instructions\\.',
       { parse_mode: 'MarkdownV2' }
     );
     return;
@@ -178,7 +225,7 @@ bot.onText(/\/who_dies/, async (msg) => {
         '*Add me as administrator with:*' + `\n` +
         '• Post messages permission' + `\n` +
         '• Read messages permission' + `\n\n` +
-        '_Use /coun\\_help for detailed instructions_\\.',
+        '_Use /group\\_help for detailed instructions_\\.',
         { parse_mode: 'MarkdownV2' }
       );
       return;
@@ -210,12 +257,13 @@ bot.onText(/\/who_dies/, async (msg) => {
         '1\\. Send /start to @countdown\\_horror\\_bot' + `\n` +
         '2\\. Accept the agreement in mini\\-app' + `\n` +
         '3\\. Your countdown will appear here' + `\n\n` +
-        '_The numbers await your acceptance_\\.',
+        '_The numbers await your acceptance\\._',
         { parse_mode: 'MarkdownV2' }
       );
       return;
     }
 
+    // СООБЩЕНИЕ В ФОРМАТЕ КАК ВЫ ПРОСИЛИ!
     let text = '🩸 *THE ORDER IS ALREADY SET*' + `\n\n`;
 
     for (const u of rows) {
@@ -239,6 +287,7 @@ bot.onText(/\/who_dies/, async (msg) => {
       }
     }
 
+    // ТОЧНО КАК ВЫ ПРОСИЛИ!
     text += `\n*Send /coun\\_help to join this list*`;
 
     await bot.sendMessage(chat.id, text, { parse_mode: 'MarkdownV2' });
@@ -253,18 +302,10 @@ bot.onText(/\/who_dies/, async (msg) => {
   }
 });
 
-// ===================== АДМИН КОМАНДЫ (скрытые) =====================
+// ===================== АДМИН КОМАНДЫ (скрытые, работают но не в меню) =====================
 
-// Команда для проверки админских прав
 bot.onText(/\/admin/, async (msg) => {
-  if (!isAdmin(msg)) {
-    await bot.sendMessage(
-      msg.chat.id,
-      '🚫 *Access Denied*',
-      { parse_mode: 'MarkdownV2' }
-    );
-    return;
-  }
+  if (!isAdmin(msg)) return;
   
   await bot.sendMessage(
     msg.chat.id,
@@ -272,25 +313,17 @@ bot.onText(/\/admin/, async (msg) => {
     `User ID: ${msg.from.id}` + `\n` +
     `Username: @${escapeMarkdown(msg.from.username || 'none')}` + `\n` +
     `Status: 🔒 ADMIN` + `\n\n` +
-    `*Available commands:*` + `\n` +
-    `• /stats \\- Show statistics` + `\n` +
-    `• /broadcast \\[message\\] \\- Send message to all users` + `\n` +
-    `• /test \\- Test message to yourself` + `\n` +
-    `• /users \\- List all users`,
+    `*Commands:*` + `\n` +
+    `/stats \\- Show statistics` + `\n` +
+    `/broadcast \\[message\\] \\- Send to all users` + `\n` +
+    `/test \\- Test message` + `\n` +
+    `/users \\- List users`,
     { parse_mode: 'MarkdownV2' }
   );
 });
 
-// ===================== СТАТИСТИКА =====================
 bot.onText(/\/stats/, async (msg) => {
-  if (!isAdmin(msg)) {
-    await bot.sendMessage(
-      msg.chat.id,
-      '🚫 *Access Denied*',
-      { parse_mode: 'MarkdownV2' }
-    );
-    return;
-  }
+  if (!isAdmin(msg)) return;
 
   try {
     const totalUsers = await pool.query('SELECT COUNT(*) FROM users');
@@ -314,53 +347,26 @@ bot.onText(/\/stats/, async (msg) => {
       { parse_mode: 'MarkdownV2' }
     );
   } catch (error) {
-    await bot.sendMessage(
-      msg.chat.id,
-      '❌ Error getting statistics',
-      { parse_mode: 'MarkdownV2' }
-    );
+    console.error('Stats error:', error);
   }
 });
 
-// ===================== РАССЫЛКА =====================
 bot.onText(/\/broadcast (.+)/, async (msg, match) => {
-  if (!isAdmin(msg)) {
-    await bot.sendMessage(
-      msg.chat.id,
-      '🚫 *Access Denied*',
-      { parse_mode: 'MarkdownV2' }
-    );
-    return;
-  }
+  if (!isAdmin(msg)) return;
 
   const message = match[1];
-  if (!message) {
-    await bot.sendMessage(
-      msg.chat.id,
-      '❌ Usage: /broadcast Your message here',
-      { parse_mode: 'MarkdownV2' }
-    );
-    return;
-  }
+  if (!message) return;
 
   try {
     const { rows } = await pool.query('SELECT telegram_id FROM users');
     let success = 0;
     let failed = 0;
 
-    await bot.sendMessage(
-      msg.chat.id,
-      `📤 Starting broadcast to ${rows.length} users\\.\\.\\\\.`,
-      { parse_mode: 'MarkdownV2' }
-    );
-
     for (const user of rows) {
       try {
-        await bot.sendMessage(
-          user.telegram_id,
-          `📢 *BROADCAST:* ${escapeMarkdown(message)}`,
-          { parse_mode: 'MarkdownV2' }
-        );
+        await bot.sendMessage(user.telegram_id, `📢 ${escapeMarkdown(message)}`, {
+          parse_mode: 'MarkdownV2'
+        });
         success++;
         await new Promise(resolve => setTimeout(resolve, 100));
       } catch (error) {
@@ -370,69 +376,35 @@ bot.onText(/\/broadcast (.+)/, async (msg, match) => {
 
     await bot.sendMessage(
       msg.chat.id,
-      `✅ *BROADCAST COMPLETE*` + `\n\n` +
-      `📝 Message: ${escapeMarkdown(message)}` + `\n` +
-      `✅ Success: ${success} users` + `\n` +
-      `❌ Failed: ${failed} users` + `\n` +
-      `📊 Total: ${rows.length} users`,
-      { parse_mode: 'MarkdownV2' }
+      `📢 Broadcast: ${success} success, ${failed} failed`
     );
   } catch (error) {
-    await bot.sendMessage(
-      msg.chat.id,
-      `❌ Broadcast error: ${escapeMarkdown(error.message)}`,
-      { parse_mode: 'MarkdownV2' }
-    );
+    console.error('Broadcast error:', error);
   }
 });
 
-// ===================== TEST =====================
 bot.onText(/\/test/, async (msg) => {
-  if (!isAdmin(msg)) {
-    await bot.sendMessage(
-      msg.chat.id,
-      '🚫 *Access Denied*',
-      { parse_mode: 'MarkdownV2' }
-    );
-    return;
-  }
-  await bot.sendMessage(
-    msg.chat.id,
-    '🧪 Bot is alive\\!',
-    { parse_mode: 'MarkdownV2' }
-  );
+  if (!isAdmin(msg)) return;
+  await bot.sendMessage(msg.chat.id, '🧪 Bot is working!');
 });
 
-// ===================== USERS =====================
 bot.onText(/\/users/, async (msg) => {
-  if (!isAdmin(msg)) {
-    await bot.sendMessage(
-      msg.chat.id,
-      '🚫 *Access Denied*',
-      { parse_mode: 'MarkdownV2' }
-    );
-    return;
-  }
+  if (!isAdmin(msg)) return;
 
   try {
     const { rows } = await pool.query(
-      'SELECT telegram_id, language, death_timestamp, created_at FROM users ORDER BY created_at DESC LIMIT 10'
+      'SELECT telegram_id, death_timestamp FROM users ORDER BY created_at DESC LIMIT 10'
     );
     
-    let userList = '👥 *LAST 10 USERS*' + `\n\n`;
+    let userList = '👥 *Last 10 users:*' + `\n\n`;
     rows.forEach((user, index) => {
-      const timeLeft = Math.floor((new Date(user.death_timestamp) - new Date()) / 86400000);
-      userList += `${index + 1}\\. ID: ${user.telegram_id}` + `\n` +
-                 `Days left: ${timeLeft}` + `\n\n`;
+      const days = Math.floor((new Date(user.death_timestamp) - new Date()) / 86400000);
+      userList += `${index + 1}\\. ${user.telegram_id} \\- ${days}d left` + `\n`;
     });
     
     await bot.sendMessage(msg.chat.id, userList, { parse_mode: 'MarkdownV2' });
   } catch (error) {
-    await bot.sendMessage(
-      msg.chat.id,
-      '❌ Error getting user list',
-      { parse_mode: 'MarkdownV2' }
-    );
+    console.error('Users error:', error);
   }
 });
 
@@ -441,20 +413,8 @@ bot.on('my_chat_member', async (msg) => {
   const chat = msg.chat;
   const status = msg.new_chat_member.status;
 
-  if (
-    (chat.type === 'group' || chat.type === 'supergroup') &&
-    status === 'administrator'
-  ) {
+  if ((chat.type === 'group' || chat.type === 'supergroup') && status === 'administrator') {
     try {
-      // Создаем таблицу если её нет
-      await pool.query(`
-        CREATE TABLE IF NOT EXISTS group_chats (
-          chat_id BIGINT PRIMARY KEY,
-          title TEXT,
-          added_at TIMESTAMPTZ DEFAULT NOW()
-        )
-      `);
-
       await pool.query(
         `INSERT INTO group_chats (chat_id, title)
          VALUES ($1, $2)
@@ -467,7 +427,7 @@ bot.on('my_chat_member', async (msg) => {
         '🩸 *THIS PLACE IS NOW MARKED*' + `\n\n` +
         'I will speak here daily with the countdown order\\.' + `\n\n` +
         '*Use /who\\_dies to see the current order*' + `\n` +
-        '*Use /coun\\_help for instructions*' + `\n\n` +
+        '*Use /coun\\_help to join the list*' + `\n\n` +
         '_The countdown begins for all who accept_\\.',
         { parse_mode: 'MarkdownV2' }
       );
@@ -478,72 +438,66 @@ bot.on('my_chat_member', async (msg) => {
 });
 
 // ===================== ЕЖЕДНЕВНОЕ СООБЩЕНИЕ В ГРУППАХ =====================
-async function sendDailyGroupMessage(chatId) {
-  try {
-    const now = new Date();
-    const { rows } = await pool.query(
-      `SELECT
-        u.telegram_id,
-        u.username,
-        u.first_name,
-        u.last_name,
-        u.death_timestamp,
-        u.ended
-       FROM users u
-       JOIN group_members gm ON u.telegram_id = gm.telegram_id
-       WHERE gm.chat_id = $1
-       ORDER BY u.death_timestamp ASC`,
-      [chatId]
-    );
-
-    if (!rows.length) return;
-
-    let message = '🩸 *THE ORDER IS ALREADY SET*' + `\n\n`;
-
-    for (const u of rows) {
-      let name;
-      if (u.username) {
-        name = `@${u.username}`;
-      } else if (u.first_name || u.last_name) {
-        name = `${u.first_name || ''} ${u.last_name || ''}`.trim();
-      } else {
-        name = `ID:${u.telegram_id}`;
-      }
-
-      const diff = new Date(u.death_timestamp) - now;
-      const days = Math.floor(diff / 86400000);
-      const hours = Math.floor((diff % 86400000) / 3600000);
-
-      if (u.ended || diff <= 0) {
-        message += `💀 *${escapeMarkdown(name)}* \\- *IT HAS ALREADY HAPPENED*` + `\n`;
-      } else {
-        message += `🕰 *${escapeMarkdown(name)}* \\- ${days}d ${hours}h left` + `\n`;
-      }
-    }
-
-    message += `\n*Send /coun\\_help to join this list*`;
-
-    await bot.sendMessage(chatId, message, { parse_mode: 'MarkdownV2' });
-    
-  } catch (error) {
-    console.error('Daily group message error:', error);
-  }
-}
-
-// Запускаем ежедневные сообщения
-setInterval(async () => {
+async function sendDailyGroupMessages() {
   try {
     const { rows } = await pool.query('SELECT chat_id FROM group_chats');
+    const now = new Date();
+
     for (const row of rows) {
-      await sendDailyGroupMessage(row.chat_id);
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Задержка между группами
+      try {
+        const users = await pool.query(
+          `SELECT
+            u.telegram_id,
+            u.username,
+            u.death_timestamp,
+            u.ended
+           FROM users u
+           JOIN group_members gm ON u.telegram_id = gm.telegram_id
+           WHERE gm.chat_id = $1
+           ORDER BY u.death_timestamp ASC`,
+          [row.chat_id]
+        );
+
+        if (!users.rows.length) continue;
+
+        // ТОЧНО КАК ВЫ ПРОСИЛИ - ФОРМАТ СООБЩЕНИЯ!
+        let message = '🩸 *THE ORDER IS ALREADY SET*' + `\n\n`;
+
+        for (const u of users.rows) {
+          let name = u.username ? `@${u.username}` : `ID:${u.telegram_id}`;
+          const diff = new Date(u.death_timestamp) - now;
+          const days = Math.floor(diff / 86400000);
+          const hours = Math.floor((diff % 86400000) / 3600000);
+
+          if (u.ended || diff <= 0) {
+            message += `💀 *${escapeMarkdown(name)}* \\- *IT HAS ALREADY HAPPENED*` + `\n`;
+          } else {
+            message += `🕰 *${escapeMarkdown(name)}* \\- ${days}d ${hours}h left` + `\n`;
+          }
+        }
+
+        // ТОЧНО КАК ВЫ ПРОСИЛИ!
+        message += `\n*Send /coun\\_help to join this list*`;
+
+        await bot.sendMessage(row.chat_id, message, { parse_mode: 'MarkdownV2' });
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+      } catch (error) {
+        console.error(`Daily message to ${row.chat_id} error:`, error);
+      }
     }
   } catch (error) {
     console.error('Daily messages error:', error);
   }
-}, 24 * 60 * 60 * 1000); // 24 часа
+}
 
-// ===================== ERRORS =====================
+// Запускаем ежедневные сообщения (раз в 24 часа)
+setInterval(sendDailyGroupMessages, 24 * 60 * 60 * 1000);
+
+// Первое сообщение через 10 секунд после запуска
+setTimeout(sendDailyGroupMessages, 10000);
+
+// ===================== ОБРАБОТКА ОШИБОК =====================
 bot.on('polling_error', (error) => {
   console.error('POLLING ERROR:', error);
 });
@@ -555,3 +509,4 @@ bot.on('webhook_error', (error) => {
 console.log('🤖 COUNTDOWN BOT STARTED SUCCESSFULLY');
 console.log(`🔐 ADMIN ID: ${ADMIN_ID}`);
 console.log(`🔐 ADMIN USERNAME: ${ADMIN_USERNAME}`);
+console.log(`📱 APP URL: ${process.env.APP_URL}`);
