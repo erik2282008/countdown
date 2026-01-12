@@ -21,25 +21,31 @@ export async function initDB() {
       ended              BOOLEAN DEFAULT FALSE,
       last_post_message  TIMESTAMPTZ,
 
-      extensions         INT DEFAULT 0
+      extensions         INT DEFAULT 0,
+
+      username           TEXT,
+      first_name         TEXT,
+      last_name          TEXT
     );
   `);
 
-  // ===== add user identity fields =====
-  await pool.query(`
-    ALTER TABLE users
-    ADD COLUMN IF NOT EXISTS username TEXT,
-    ADD COLUMN IF NOT EXISTS first_name TEXT,
-    ADD COLUMN IF NOT EXISTS last_name TEXT;
-  `);
-
-  // ===== group members mapping =====
+  // ===== group_members =====
   await pool.query(`
     CREATE TABLE IF NOT EXISTS group_members (
       chat_id BIGINT,
       telegram_id BIGINT,
       joined_at TIMESTAMPTZ DEFAULT NOW(),
       PRIMARY KEY (chat_id, telegram_id)
+    );
+  `);
+
+  // ===== group_chats =====
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS group_chats (
+      chat_id BIGINT PRIMARY KEY,
+      title TEXT,
+      added_at TIMESTAMPTZ DEFAULT NOW(),
+      daily_active BOOLEAN DEFAULT TRUE
     );
   `);
 
