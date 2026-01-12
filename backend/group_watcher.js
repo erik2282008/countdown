@@ -26,21 +26,21 @@ function formatTime(sec) {
   return `${s}s`;
 }
 
-// ===================== ДОБАВЛЕНО: ОТОБРАЖЕНИЕ ИМЕНИ =====================
+// ===================== ОТОБРАЖЕНИЕ ИМЕНИ =====================
 function displayName(user) {
   if (user.username) return `@${user.username}`;
   if (user.first_name || user.last_name) {
-    return `${user.first_name || ''} ${user.last_name || ''}`.trim();
+    return `${user.first_name || ''} ${u.last_name || ''}`.trim();
   }
   return `ID:${user.telegram_id}`;
 }
 
-// Получение фразы по языку и оставшемуся времени
-function getPhraseByTimeAndLanguage(language, secondsLeft) {
+// Получение страшной фразы по языку и оставшемуся времени
+function getHorrorPhrase(language, secondsLeft) {
   if (secondsLeft <= 0) {
     return language === 'RU' 
-      ? random(['ОН УЖЕ ПРИШЕЛ', 'КОНЕЦ НАСТУПИЛ', 'ВРЕМЯ ВЫШЛО'])
-      : random(['IT HAS ARRIVED', 'THE END HAS COME', 'TIME IS UP']);
+      ? random(['ОН УЖЕ ПРИШЕЛ', 'КОНЕЦ НАСТУПИЛ', 'ВРЕМЯ ВЫШЛО', 'ЭТО СЛУЧИЛОСЬ', 'НЕТ ВОЗВРАТА'])
+      : random(['IT HAS ARRIVED', 'THE END HAS COME', 'TIME IS UP', 'IT HAPPENED', 'NO RETURN']);
   }
   
   if (secondsLeft <= 86400) { // 24 часа
@@ -51,13 +51,22 @@ function getPhraseByTimeAndLanguage(language, secondsLeft) {
     return language === 'RU' ? random(PHRASES_RU_7D) : random(PHRASES_7D);
   }
   
-  return language === 'RU'
-    ? random(['ВРЕМЯ ИДЕТ', 'ОТСЧЕТ ПРОДОЛЖАЕТСЯ', 'ОН ЖДЕТ'])
-    : random(['TIME PASSES', 'COUNTDOWN CONTINUES', 'IT WAITS']);
+  // Общие страшные фразы для большего времени
+  const generalPhrasesRU = [
+    'ВРЕМЯ ИДЁТ', 'ОТСЧЕТ ПРОДОЛЖАЕТСЯ', 'ОН ЖДЁТ', 'ТИКАЕТ', 'НИКТО НЕ УЙДЁТ',
+    'СУДЬБА ПРЕДРЕШЕНА', 'ЧАСЫ НЕ ЛГУТ', 'ОНО НЕ СПИТ', 'ПРИБЛИЖАЕТСЯ', 'НЕИЗБЕЖНО'
+  ];
+  
+  const generalPhrasesEN = [
+    'TIME PASSES', 'COUNTDOWN CONTINUES', 'IT WAITS', 'TICKING', 'NO ONE ESCAPES',
+    'FATE IS SEALED', 'THE CLOCK DOESN\'T LIE', 'IT DOESN\'T SLEEP', 'APPROACHING', 'INEVITABLE'
+  ];
+  
+  return language === 'RU' ? random(generalPhrasesRU) : random(generalPhrasesEN);
 }
 
-// Основная функция проверки групп
-async function checkGroups() {
+// ===================== ОСНОВНАЯ ФУНКЦИЯ ЕЖЕДНЕВНЫХ СООБЩЕНИЙ =====================
+async function sendDailyGroupMessages() {
   const now = new Date();
 
   try {
@@ -65,11 +74,11 @@ async function checkGroups() {
     const groups = await pool.query(`SELECT chat_id, title FROM group_chats`);
 
     if (groups.rows.length === 0) {
-      console.log('👥 No groups to monitor');
+      console.log('👥 No groups to send daily messages');
       return;
     }
 
-    console.log(`👥 Checking ${groups.rows.length} groups...`);
+    console.log(`📢 Sending daily messages to ${groups.rows.length} groups...`);
 
     for (const group of groups.rows) {
       try {
@@ -77,8 +86,9 @@ async function checkGroups() {
         let botIsAdmin = true;
         try {
           const admins = await bot.getChatAdministrators(group.chat_id);
+          const botInfo = await bot.getMe();
           botIsAdmin = admins.some(
-            admin => admin.user.is_bot && admin.user.username === (await bot.getMe()).username
+            admin => admin.user.is_bot && admin.user.username === botInfo.username
           );
         } catch (adminError) {
           console.error(`Can't get admins for group ${group.chat_id}:`, adminError.message);
@@ -86,7 +96,9 @@ async function checkGroups() {
         }
 
         if (!botIsAdmin) {
-          console.log(`❌ Bot is not admin in group ${group.chat_id}`);
+          console.log(`❌ Bot is not admin in group ${group.chat_id}, skipping`);
+          // Удаляем группу из базы если бота выгнали
+          await pool.query('DELETE FROM group_chats WHERE chat_id = $1', [group.chat_id]);
           continue;
         }
 
@@ -114,7 +126,7 @@ async function checkGroups() {
 
         console.log(`📊 Group ${group.chat_id}: ${users.rows.length} members`);
 
-        // Отправляем одно сообщение для всей группы
+        // Создаём страшное сообщение для группы
         let groupMessage = '🩸 *THE ORDER IS ALREADY SET*' + `\n\n`;
 
         for (const u of users.rows) {
@@ -122,31 +134,33 @@ async function checkGroups() {
           const sec = Math.floor(diff / 1000);
           const name = displayName(u);
           const escapedName = escapeMarkdown(name);
+          const horrorPhrase = getHorrorPhrase(u.language || 'EN', sec);
 
           if (u.ended || sec <= 0) {
-            const phrase = getPhraseByTimeAndLanguage(u.language || 'EN', sec);
-            groupMessage += `💀 *${escapedName}* \\- ${phrase}` + `\n`;
+            groupMessage += `💀 *${escapedName}* \\- ${horrorPhrase}` + `\n`;
           } else {
-            const phrase = getPhraseByTimeAndLanguage(u.language || 'EN', sec);
-            groupMessage += `🕰 *${escapedName}* \\- ${formatTime(sec)} \\- ${phrase}` + `\n`;
+            const timeLeft = formatTime(sec);
+            groupMessage += `🕰 *${escapedName}* \\- ${timeLeft} \\- ${horrorPhrase}` + `\n`;
           }
         }
 
         // Добавляем инструкцию внизу
-        groupMessage += `\n*Use /who\\_dies to update*`;
+        groupMessage += `\n` +
+          `*Send /coun\\_help to join this list*` + `\n` +
+          `_The countdown never stops_\\.`;
 
         try {
           await bot.sendMessage(group.chat_id, groupMessage, {
             parse_mode: 'MarkdownV2'
           });
           
-          console.log(`✅ Message sent to group ${group.chat_id}`);
+          console.log(`✅ Daily message sent to group ${group.chat_id}`);
           
           // Задержка между сообщениями в группах
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          await new Promise(resolve => setTimeout(resolve, 3000));
           
         } catch (sendError) {
-          console.error(`Failed to send message to group ${group.chat_id}:`, sendError.message);
+          console.error(`Failed to send daily message to group ${group.chat_id}:`, sendError.message);
           
           // Если бота выгнали из группы, удаляем её из базы
           if (sendError.response?.error_code === 403) {
@@ -163,13 +177,29 @@ async function checkGroups() {
       }
     }
 
+    console.log('✅ Daily group messages completed');
+
   } catch (error) {
-    console.error('Group watcher database error:', error);
+    console.error('Daily group messages database error:', error);
   }
 }
 
-// Функция для отправки тестового сообщения в группу
-export async function sendTestGroupMessage(chatId) {
+// ===================== ФУНКЦИИ ДЛЯ АДМИНА =====================
+
+// Принудительная отправка сообщений во все группы
+export async function forceSendDailyMessages() {
+  try {
+    console.log('🚀 Force sending daily messages to all groups');
+    await sendDailyGroupMessages();
+    return { success: true };
+  } catch (error) {
+    console.error('Force send error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Тестовая отправка в конкретную группу
+export async function testGroupMessage(chatId) {
   try {
     const now = new Date();
     
@@ -186,27 +216,22 @@ export async function sendTestGroupMessage(chatId) {
       JOIN group_members gm ON u.telegram_id = gm.telegram_id
       WHERE gm.chat_id = $1
       ORDER BY u.death_timestamp ASC
-      LIMIT 10
+      LIMIT 5
     `, [chatId]);
 
+    let testMessage = '🧪 *TEST MESSAGE*' + `\n\n`;
+
     if (!users.rows.length) {
-      await bot.sendMessage(
-        chatId,
-        '👻 *TEST MESSAGE*' + `\n\n` + 'No users found in this group\\.',
-        { parse_mode: 'MarkdownV2' }
-      );
-      return;
-    }
+      testMessage += 'No users found in this group\\.';
+    } else {
+      for (const u of users.rows.slice(0, 3)) {
+        const diff = new Date(u.death_timestamp) - now;
+        const sec = Math.floor(diff / 1000);
+        const name = displayName(u);
+        const escapedName = escapeMarkdown(name);
 
-    let testMessage = '🩸 *TEST GROUP MESSAGE*' + `\n\n`;
-
-    for (const u of users.rows.slice(0, 5)) {
-      const diff = new Date(u.death_timestamp) - now;
-      const sec = Math.floor(diff / 1000);
-      const name = displayName(u);
-      const escapedName = escapeMarkdown(name);
-
-      testMessage += `👤 *${escapedName}* \\- ${formatTime(sec)} left` + `\n`;
+        testMessage += `👤 *${escapedName}* \\- ${formatTime(sec)} left` + `\n`;
+      }
     }
 
     testMessage += `\n*This is a test message*\\.`;
@@ -216,58 +241,59 @@ export async function sendTestGroupMessage(chatId) {
     });
 
     console.log(`✅ Test message sent to group ${chatId}`);
+    return true;
 
   } catch (error) {
     console.error('Test group message error:', error);
+    return false;
   }
 }
 
-// Функция для принудительной проверки всех групп
-export async function forceCheckAllGroups() {
+// Получить статистику по группам
+export async function getGroupStats() {
   try {
-    const groups = await pool.query(`SELECT chat_id, title FROM group_chats`);
-    console.log(`📢 Force checking ${groups.rows.length} groups...`);
+    const groups = await pool.query(`
+      SELECT 
+        gc.chat_id,
+        gc.title,
+        COUNT(gm.telegram_id) as member_count
+      FROM group_chats gc
+      LEFT JOIN group_members gm ON gc.chat_id = gm.chat_id
+      GROUP BY gc.chat_id, gc.title
+    `);
 
-    let success = 0;
-    let failed = 0;
-
-    for (const group of groups.rows) {
-      try {
-        await checkGroups(); // Используем основную функцию
-        success++;
-      } catch (error) {
-        failed++;
-        console.error(`Failed to check group ${group.chat_id}:`, error.message);
-      }
-    }
-
-    console.log(`✅ Force check completed: ${success} success, ${failed} failed`);
-    return { success, failed };
-
+    return {
+      totalGroups: groups.rows.length,
+      groups: groups.rows,
+      totalMembers: groups.rows.reduce((sum, group) => sum + parseInt(group.member_count), 0)
+    };
   } catch (error) {
-    console.error('Force check groups error:', error);
-    return { success: 0, failed: 0 };
+    console.error('Get group stats error:', error);
+    return { totalGroups: 0, groups: [], totalMembers: 0 };
   }
 }
 
-// Проверка групп раз в сутки
-const CHECK_INTERVAL = 24 * 60 * 60 * 1000; // 24 часа
+// ===================== ЗАПУСК ЕЖЕДНЕВНЫХ СООБЩЕНИЙ =====================
 
-console.log('👥 GROUP WATCHER STARTED - Checking every 24 hours');
+// Проверка каждые 24 часа
+const DAILY_INTERVAL = 24 * 60 * 60 * 1000;
 
-// Первая проверка через 30 секунд после запуска
+console.log('👥 GROUP WATCHER STARTED - Daily messages every 24 hours');
+
+// Первое сообщение через 30 секунд после запуска
 setTimeout(() => {
-  checkGroups();
-  console.log('🔍 Initial group check completed');
+  sendDailyGroupMessages();
+  console.log('🔍 Initial daily messages sent');
 }, 30000);
 
-// Периодическая проверка
-setInterval(checkGroups, CHECK_INTERVAL);
+// Периодическая отправка
+const dailyInterval = setInterval(sendDailyGroupMessages, DAILY_INTERVAL);
 
 // Graceful shutdown
 process.on('SIGINT', async () => {
   console.log('🛑 Stopping group watcher...');
+  clearInterval(dailyInterval);
   process.exit(0);
 });
 
-export { checkGroups };
+export { sendDailyGroupMessages };
