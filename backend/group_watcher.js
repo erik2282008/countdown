@@ -18,54 +18,22 @@ function formatTime(sec) {
   const d = Math.floor(sec / 86400);
   const h = Math.floor((sec % 86400) / 3600);
   const m = Math.floor((sec % 3600) / 60);
-  const s = sec % 60;
   
   if (d > 0) return `${d}d ${h}h`;
   if (h > 0) return `${h}h ${m}m`;
-  if (m > 0) return `${m}m ${s}s`;
-  return `${s}s`;
+  return `${m}m`;
 }
 
 // ===================== ОТОБРАЖЕНИЕ ИМЕНИ =====================
 function displayName(user) {
   if (user.username) return `@${user.username}`;
   if (user.first_name || user.last_name) {
-    return `${user.first_name || ''} ${u.last_name || ''}`.trim();
+    return `${user.first_name || ''} ${user.last_name || ''}`.trim();
   }
   return `ID:${user.telegram_id}`;
 }
 
-// Получение страшной фразы по языку и оставшемуся времени
-function getHorrorPhrase(language, secondsLeft) {
-  if (secondsLeft <= 0) {
-    return language === 'RU' 
-      ? random(['ОН УЖЕ ПРИШЕЛ', 'КОНЕЦ НАСТУПИЛ', 'ВРЕМЯ ВЫШЛО', 'ЭТО СЛУЧИЛОСЬ', 'НЕТ ВОЗВРАТА'])
-      : random(['IT HAS ARRIVED', 'THE END HAS COME', 'TIME IS UP', 'IT HAPPENED', 'NO RETURN']);
-  }
-  
-  if (secondsLeft <= 86400) { // 24 часа
-    return language === 'RU' ? random(PHRASES_RU_24H) : random(PHRASES_24H);
-  }
-  
-  if (secondsLeft <= 7 * 86400) { // 7 дней
-    return language === 'RU' ? random(PHRASES_RU_7D) : random(PHRASES_7D);
-  }
-  
-  // Общие страшные фразы для большего времени
-  const generalPhrasesRU = [
-    'ВРЕМЯ ИДЁТ', 'ОТСЧЕТ ПРОДОЛЖАЕТСЯ', 'ОН ЖДЁТ', 'ТИКАЕТ', 'НИКТО НЕ УЙДЁТ',
-    'СУДЬБА ПРЕДРЕШЕНА', 'ЧАСЫ НЕ ЛГУТ', 'ОНО НЕ СПИТ', 'ПРИБЛИЖАЕТСЯ', 'НЕИЗБЕЖНО'
-  ];
-  
-  const generalPhrasesEN = [
-    'TIME PASSES', 'COUNTDOWN CONTINUES', 'IT WAITS', 'TICKING', 'NO ONE ESCAPES',
-    'FATE IS SEALED', 'THE CLOCK DOESN\'T LIE', 'IT DOESN\'T SLEEP', 'APPROACHING', 'INEVITABLE'
-  ];
-  
-  return language === 'RU' ? random(generalPhrasesRU) : random(generalPhrasesEN);
-}
-
-// ===================== ОСНОВНАЯ ФУНКЦИЯ ЕЖЕДНЕВНЫХ СООБЩЕНИЙ =====================
+// ===================== ЕЖЕДНЕВНОЕ СООБЩЕНИЕ В ГРУППАХ =====================
 async function sendDailyGroupMessages() {
   const now = new Date();
 
@@ -97,8 +65,6 @@ async function sendDailyGroupMessages() {
 
         if (!botIsAdmin) {
           console.log(`❌ Bot is not admin in group ${group.chat_id}, skipping`);
-          // Удаляем группу из базы если бота выгнали
-          await pool.query('DELETE FROM group_chats WHERE chat_id = $1', [group.chat_id]);
           continue;
         }
 
@@ -126,31 +92,28 @@ async function sendDailyGroupMessages() {
 
         console.log(`📊 Group ${group.chat_id}: ${users.rows.length} members`);
 
-        // Создаём страшное сообщение для группы
-        let groupMessage = '🩸 *THE ORDER IS ALREADY SET*' + `\n\n`;
+        // СООБЩЕНИЕ В ФОРМАТЕ КАК ПРОСИЛИ!
+        let message = '🩸 *THE ORDER IS ALREADY SET*' + `\n\n`;
 
         for (const u of users.rows) {
           const diff = new Date(u.death_timestamp) - now;
           const sec = Math.floor(diff / 1000);
           const name = displayName(u);
           const escapedName = escapeMarkdown(name);
-          const horrorPhrase = getHorrorPhrase(u.language || 'EN', sec);
 
           if (u.ended || sec <= 0) {
-            groupMessage += `💀 *${escapedName}* \\- ${horrorPhrase}` + `\n`;
+            message += `💀 *${escapedName}* \\- *IT HAS ALREADY HAPPENED*` + `\n`;
           } else {
             const timeLeft = formatTime(sec);
-            groupMessage += `🕰 *${escapedName}* \\- ${timeLeft} \\- ${horrorPhrase}` + `\n`;
+            message += `🕰 *${escapedName}* \\- ${timeLeft} left` + `\n`;
           }
         }
 
-        // Добавляем инструкцию внизу
-        groupMessage += `\n` +
-          `*Send /coun\\_help to join this list*` + `\n` +
-          `_The countdown never stops_\\.`;
+        // ТОЧНО КАК ПРОСИЛИ!
+        message += `\n*Send /coun\\_help to join this list*`;
 
         try {
-          await bot.sendMessage(group.chat_id, groupMessage, {
+          await bot.sendMessage(group.chat_id, message, {
             parse_mode: 'MarkdownV2'
           });
           
@@ -229,8 +192,9 @@ export async function testGroupMessage(chatId) {
         const sec = Math.floor(diff / 1000);
         const name = displayName(u);
         const escapedName = escapeMarkdown(name);
+        const timeLeft = formatTime(sec);
 
-        testMessage += `👤 *${escapedName}* \\- ${formatTime(sec)} left` + `\n`;
+        testMessage += `👤 *${escapedName}* \\- ${timeLeft} left` + `\n`;
       }
     }
 
