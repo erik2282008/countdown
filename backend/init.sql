@@ -16,10 +16,18 @@ CREATE TABLE IF NOT EXISTS users (
   username           TEXT,
   first_name         TEXT,
   last_name          TEXT
-  CREATE TABLE IF NOT EXISTS group_members (
+);
+
+CREATE TABLE IF NOT EXISTS group_members (
   chat_id BIGINT,
   telegram_id BIGINT,
   joined_at TIMESTAMPTZ DEFAULT NOW(),
   PRIMARY KEY (chat_id, telegram_id)
 );
 
+CREATE TABLE IF NOT EXISTS group_chats (
+  chat_id BIGINT PRIMARY KEY,
+  title TEXT,
+  added_at TIMESTAMPTZ DEFAULT NOW(),
+  daily_active BOOLEAN DEFAULT TRUE
+);
