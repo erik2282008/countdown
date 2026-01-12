@@ -77,12 +77,16 @@ setInterval(async () => {
 
     console.log(`🕰 Daily check for ${groups.length} groups at ${now.toISOString()}`);
 
+    // Получаем username бота один раз
+    const botInfo = await bot.getMe();
+    const botUsername = botInfo.username;
+
     for (const group of groups) {
       try {
         // Проверяем, что бот всё ещё админ
         const admins = await bot.getChatAdministrators(group.chat_id);
         const botIsAdmin = admins.some(
-          a => a.user.is_bot && a.user.username === (await bot.getMe()).username
+          a => a.user.is_bot && a.user.username === botUsername
         );
 
         if (!botIsAdmin) {
@@ -151,7 +155,7 @@ setInterval(async () => {
           }
 
           const name = displayName(user);
-          const diff = new Date(user.death_timestamp) - now;
+          const diff = new Date(u.death_timestamp) - now;
           const diffSec = Math.floor(diff / 1000);
 
           if (user.ended || diff <= 0) {
@@ -202,12 +206,5 @@ setInterval(async () => {
     console.error('Daily group watcher error:', mainError);
   }
 }, 24 * 60 * 60 * 1000); // Раз в сутки
-
-// ===================== ПРОВЕРКА КАЖДЫЕ 6 ЧАСОВ (для теста) =====================
-// Раскомментируйте для тестирования:
-// setInterval(async () => {
-//   console.log('🕐 Test interval running...');
-//   // Тот же код, что и выше
-// }, 6 * 60 * 60 * 1000);
 
 console.log('👁 GROUP WATCHER STARTED - Daily messages enabled');
