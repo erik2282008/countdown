@@ -55,7 +55,7 @@ bot.on('message', (msg) => {
 });
 
 // ===================== НАСТРОЙКА МЕНЮ БОТА =====================
-// В МЕНЮ ТОЛЬКО 2 КОМАНДЫ!
+// В МЕНЮ ТОЛЬКО 2 КОМАНДЫ: start и group_help
 bot.setMyCommands([
   {
     command: 'start',
@@ -154,36 +154,41 @@ bot.onText(/\/start(@countdown_horror_bot)?$/, async (msg) => {
 });
 
 // ===================== /coun_help КОМАНДА =====================
-bot.onText(/\/coun_help(@countdown_horror_bot)?$/, async (msg) => {
-  // КОМАНДА РАБОТАЕТ В ЛЮБОМ ЧАТЕ - И В ГРУППАХ И В ЛИЧКЕ
-  await bot.sendMessage(
-    msg.chat.id,
-    `👻 *HOW TO APPEAR IN THE COUNTDOWN LIST*` + `\n\n` +
-    `*TO SEE YOUR TIME IN THE GROUP LIST, YOU MUST:*` + `\n\n` +
-    `1\\. *START YOUR COUNTDOWN* \\- Send /start to @countdown\\_horror\\_bot` + `\n` +
-    `2\\. *FACE THE AGREEMENT* \\- Click the button below and open the mini\\-app` + `\n` +
-    `3\\. *ACCEPT YOUR FATE* \\- Read and accept the irrevocable terms` + `\n` +
-    `4\\. *YOUR TIME IS REVEALED* \\- Your countdown will appear in the daily group message` + `\n\n` +
-    `⚠️ *WARNING* \\- The agreement is absolute and cannot be revoked\\.` + `\n` +
-    `🩸 *YOUR TIME WAS ALWAYS COUNTING* \\- You just didn\\'t know it\\.` + `\n\n` +
-    `_Do not look away\\. The numbers await your acceptance\\._`,
-    {
-      parse_mode: 'MarkdownV2',
-      reply_markup: {
-        inline_keyboard: [[
-          {
-            text: '🩸 ACCEPT YOUR FATE NOW',
-            web_app: { url: process.env.APP_URL || 'https://philosophical-cari-eriksim-0bb1de46.koyeb.app/' }
-          }
-        ]]
+// РАБОТАЕТ В ГРУППАХ ЧЕРЕЗ ОБРАБОТКУ ТЕКСТА
+bot.on('message', async (msg) => {
+  if (!msg.text) return;
+  
+  // Проверяем команду coun_help в любом формате
+  if (msg.text.match(/^\/coun_help(@countdown_horror_bot)?$/)) {
+    console.log('🎯 COUN_HELP command received in chat:', msg.chat.type);
+    
+    await bot.sendMessage(
+      msg.chat.id,
+      `👻 *HOW TO APPEAR IN THE COUNTDOWN LIST*` + `\n\n` +
+      `*TO SEE YOUR TIME IN THE GROUP LIST, YOU MUST:*` + `\n\n` +
+      `1\\. *START YOUR COUNTDOWN* \\- Send /start to @countdown\\_horror\\_bot` + `\n` +
+      `2\\. *FACE THE AGREEMENT* \\- Click the button below and open the mini\\-app` + `\n` +
+      `3\\. *ACCEPT YOUR FATE* \\- Read and accept the irrevocable terms` + `\n` +
+      `4\\. *YOUR TIME IS REVEALED* \\- Your countdown will appear in the daily group message` + `\n\n` +
+      `⚠️ *WARNING* \\- The agreement is absolute and cannot be revoked\\.` + `\n\n` +
+      `_Do not look away\\. The numbers await your acceptance\\._`,
+      {
+        parse_mode: 'MarkdownV2',
+        reply_markup: {
+          inline_keyboard: [[
+            {
+              text: '🩸 ACCEPT YOUR FATE NOW',
+              web_app: { url: process.env.APP_URL || 'https://philosophical-cari-eriksim-0bb1de46.koyeb.app/' }
+            }
+          ]]
+        }
       }
-    }
-  );
+    );
+  }
 });
 
 // ===================== /group_help КОМАНДА =====================
 bot.onText(/\/group_help(@countdown_horror_bot)?$/, async (msg) => {
-  // КОМАНДА РАБОТАЕТ В ЛЮБОМ ЧАТЕ
   await bot.sendMessage(
     msg.chat.id,
     `🔮 *HOW TO ADD THE COUNTDOWN TO YOUR GROUP*` + `\n\n` +
